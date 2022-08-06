@@ -1,21 +1,24 @@
 import json
+from datetime import datetime, timedelta
 from os import path
 
 class DefaultSettings:
     def __init__(self):
         self.bulk_url = 'https://api.scryfall.com/bulk-data'
-        self.bulk_file_type = 'Default Cards'
+        self.time_format = '%H:%M:%S %d/%m/%Y'
+        self.bulk_data_type = 'Default Cards'
+        self.bulk_time_period = (60*60*24)
+        self.bulk_last_updated = str((datetime.now()-timedelta(2)).strftime(self.time_format))
     
     def get_json(self):
-        return json.dumps(self, default=lambda o: o.__dict__, 
-            sort_keys=True, indent=4)
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
     def create_file(self, file_path):
         json_file = json.loads(self.get_json())
         with open(file_path, 'w', encoding='utf8') as f:
             json.dump(json_file, f, ensure_ascii=False, indent=4)
 
-def check_if_settings_exists(file_path):
+def check_if_settings_exist(file_path):
     file_found = path.exists(file_path)
     if not file_found:
         settings = DefaultSettings()
