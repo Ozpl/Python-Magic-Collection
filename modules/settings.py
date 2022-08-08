@@ -5,10 +5,10 @@ from os import path
 class DefaultSettings:
     def __init__(self):
         self.bulk_url = 'https://api.scryfall.com/bulk-data'
-        self.time_format = '%H:%M:%S %d/%m/%Y'
+        self.time_format_full = '%H:%M:%S %d/%m/%Y'
         self.bulk_data_type = 'Default Cards'
         self.bulk_time_period = (60*60*24)
-        self.bulk_last_updated = str((datetime.now()-timedelta(2)).strftime(self.time_format))
+        self.bulk_last_updated = str((datetime.now()-timedelta(60)).strftime(self.time_format_full))
     
     def get_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)

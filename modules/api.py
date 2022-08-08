@@ -1,9 +1,7 @@
-from datetime import datetime
-import os
 import json
 import requests
+from datetime import datetime
 from modules.settings import load_settings_json
-from dotenv import load_dotenv
 
 def get_bulk_data_response(url):
     request = requests.get(url)
@@ -15,9 +13,8 @@ def download_bulk_json_file(url, file_name):
     with open(f'./downloads/{file_name}.json', 'w', encoding='utf8') as f:
         json.dump(response.json(), f, ensure_ascii=False, indent=4)
 
-load_dotenv()
-SETTINGS_JSON = load_settings_json(os.getenv('SETTINGS_FILE_PATH'))
-SETTINGS_FILE_PATH = os.getenv('SETTINGS_FILE_PATH')
+SETTINGS_FILE_PATH = './settings.json'
+SETTINGS_JSON = load_settings_json(SETTINGS_FILE_PATH)
 
 def get_data_from_scryfall():
     bulk_response = get_bulk_data_response(SETTINGS_JSON['bulk_url'])

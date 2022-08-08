@@ -1,6 +1,6 @@
 {
     "bulk_data_type": "Default Cards",
-    "bulk_last_updated": "21:25:08 06/08/2022",
+    "bulk_last_updated": "23:40:57 07/08/2022",
     "bulk_time_period": 86400,
     "bulk_url": "https://api.scryfall.com/bulk-data",
     "time_format": "%H:%M:%S %d/%m/%Y"
