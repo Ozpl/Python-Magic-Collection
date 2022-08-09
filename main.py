@@ -6,11 +6,12 @@ from PyQt5.QtGui import QPixmap
 
 SETTINGS_FILE_PATH = './settings.json'
 
-#build_file_structures
+#build_file_structures()
 check_if_settings_exist(SETTINGS_FILE_PATH)
 get_data_from_scryfall()
 #build_db()
 
+#swap Default Cards to variable from settings
 with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
     j = json.load(f)
 

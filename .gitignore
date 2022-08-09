@@ -1,7 +1,10 @@
 #Debug
 *.exe
 *.bak
-*.jpg
+images/*.jpg
+images/*.png
+downloads/*.json
+database.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -16,7 +19,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/
+#downloads/
 eggs/
 .eggs/
 lib/
