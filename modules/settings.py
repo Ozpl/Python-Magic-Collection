@@ -1,3 +1,4 @@
+import os
 import json
 from datetime import datetime, timedelta
 from os import path
@@ -28,3 +29,17 @@ def load_settings_json(file_path):
     with open(file_path, 'r', encoding='utf8') as f:
         settings_json = json.load(f)
     return settings_json
+
+def build_folder_structure():
+    folders = [
+        'collections',
+        'database',
+        'decks',
+        'downloads',
+        'images',
+    ]
+    for element in folders:
+        if not path.exists(f'./{element}'):
+            os.mkdir(f'./{element}')
+
+build_folder_structure()

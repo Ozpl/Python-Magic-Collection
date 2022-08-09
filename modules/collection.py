@@ -1,5 +1,5 @@
-import collections
 import os
+from os import path
 import json
 
 class Collection:
