@@ -1,7 +1,6 @@
 import sqlite3
 from sqlite3 import Error
-
-DATABASE_PATH = './database/database.db'
+from modules.consts import DATABASE_PATH
 
 def create_connection(db_path):
     connection = None
@@ -27,7 +26,11 @@ def create_main_table(connection):
         prints_search_uri VARCHAR(255),
         rulings_uri VARCHAR(255),
         scryfall_uri VARCHAR(255),
-        uri VARCHAR(255)
+        uri VARCHAR(255),
+
+        released_at DATETIME,
+
+        checksum BIGINT
     )
     '''
 
@@ -167,8 +170,3 @@ def create_sub_table(connection, attribute):
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
-
-connection = create_connection(DATABASE_PATH)
-create_main_table(connection)
-create_sub_table(connection, 'multiverse_id')
-connection.close()

@@ -2,9 +2,11 @@ import os
 import json
 from datetime import datetime, timedelta
 from os import path
+from modules.consts import FOLDER_STRUCTURE
 
 class DefaultSettings:
     def __init__(self):
+        self.debug_mode = False
         self.bulk_url = 'https://api.scryfall.com/bulk-data'
         self.time_format_full = '%H:%M:%S %d/%m/%Y'
         self.bulk_data_type = 'Default Cards'
@@ -25,21 +27,12 @@ def check_if_settings_exist(file_path):
         settings = DefaultSettings()
         settings.create_file(file_path)
 
-def load_settings_json(file_path):
+def load_settings(file_path):
     with open(file_path, 'r', encoding='utf8') as f:
-        settings_json = json.load(f)
-    return settings_json
+        settings = json.load(f)
+    return settings
 
 def build_folder_structure():
-    folders = [
-        'collections',
-        'database',
-        'decks',
-        'downloads',
-        'images',
-    ]
-    for element in folders:
+    for element in FOLDER_STRUCTURE:
         if not path.exists(f'./{element}'):
             os.mkdir(f'./{element}')
-
-build_folder_structure()
