@@ -3,7 +3,7 @@ import json
 
 class Deck:
     def __init__(self):
-        self.name = 'Deck'
+        self.name = 'My Deck'
         self.format = 'Standard'
         self.isValid = False
         self.cards = []

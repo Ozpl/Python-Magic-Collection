@@ -1,90 +1,23 @@
-import sqlite3
-import zlib
 import json
-from sqlite3 import Error
-from modules.consts import DATABASE_PATH
 from datetime import datetime, timedelta
-
-def check_sum(card):
-    checksum = 0
-    for item in card.items():
-        c1 = 1
-        for t in item:
-            c1 = zlib.adler32(bytes(repr(t), "utf-8"), c1)
-        checksum = checksum ^ c1
-    return checksum
-
-def create_connection(db_path):
-    connection = None
-    try:
-        connection = sqlite3.connect(db_path)
-        return connection
-    except Error as e:
-        print(e)
-
-def get_table_columns(connection, table_name):
-    query = f'''
-    SELECT * FROM {table_name}_table LIMIT 1
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    names = list(map(lambda x: x[0], cursor.description))
-    return names
-
-def get_max_date(connection, table_name):
-    query = f'''
-    SELECT MAX(released_at) FROM {table_name}_table
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    max_date = cursor.fetchone()[0]
-    return datetime.strptime(max_date, '%Y-%m-%d')
-
-def get_card_from_db(connection, table_name, id):
-    query = f'''
-    SELECT * FROM {table_name}_table
-    WHERE id = '{id}'
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    record = cursor.fetchall()[0]
-    return record
-
-def get_id_and_checksum(connection, table_name):
-    query = f'''
-    SELECT id, checksum FROM {table_name}_table
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    record = cursor.fetchall()
-    return record
-
-
-def delete_record(connection, table_name, id):
-    query = f'''
-    DELETE FROM {table_name}_table
-    WHERE id = '{id}'
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
+from modules.database.functions import checksum_of_record, query_get_table_columns, query_get_max_date, query_get_id_and_checksum, query_delete_record
 
 def batch_load(connection):
-    available_columns = get_table_columns(connection, 'main')
+    available_columns = query_get_table_columns(connection, 'main')
     
     with open('./downloads/Default Cards.json', 'r', encoding='utf8') as f:
         data = json.load(f)
         insert_list = []
         insert_column_list = []
-        max_date = get_max_date(connection, 'main')
+        max_date = query_get_max_date(connection, 'main')
 
-        id_and_checksum = get_id_and_checksum(connection, 'main')
+        id_and_checksum = query_get_id_and_checksum(connection, 'main')
 
         for card in data[:5]:
             current_date = datetime.strptime(card['released_at'], '%Y-%m-%d')
             #if date is newer then insert to db
             if (max_date - current_date) < timedelta(0):
-                checksum = check_sum(card)
+                checksum = checksum_of_record(card)
                 found_atr = []
                 found_col = []
                 keys_list = card.keys()
@@ -98,12 +31,12 @@ def batch_load(connection):
                 insert_column_list.append(found_col)
             else:
                 json_id = card['id']
-                json_checksum = check_sum(card)
+                json_checksum = checksum_of_record(card)
 
                 database_checksum = [element[1] for element in id_and_checksum if json_id == element[0]][0]
                 if json_checksum != database_checksum:
-                    delete_record(connection, 'main', json_id)
-                    checksum = check_sum(card)
+                    query_delete_record(connection, 'main', json_id)
+                    checksum = checksum_of_record(card)
                     found_atr = []
                     found_col = []
                     keys_list = card.keys()

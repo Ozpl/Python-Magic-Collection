@@ -1,14 +1,5 @@
 import sqlite3
-from sqlite3 import Error
 from modules.consts import DATABASE_PATH
-
-def create_connection(db_path):
-    connection = None
-    try:
-        connection = sqlite3.connect(db_path)
-        return connection
-    except Error as e:
-        print(e)
 
 def create_main_table(connection):
     query = '''
@@ -141,17 +132,7 @@ def create_main_table(connection):
     connection.commit()
 
 def create_sub_table(connection, attribute):
-    '''
-    multiverse
-    all_parts
-    card_faces
-    keywords
-    finishes
-    frame_effects
-    games
-    promo_types
-    '''
-    
+    #todo    
     att_type = 'VARCHAR(255)'
 
     match attribute:

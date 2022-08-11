@@ -3,7 +3,7 @@ import json
 
 class Collection:
     def __init__(self):
-        self.name = 'Collection'
+        self.name = 'My Collection'
         self.cards = []
 
     def get_json(self):

@@ -1,38 +1,8 @@
-import sqlite3
-import zlib
 import json
-from sqlite3 import Error
-from modules.consts import DATABASE_PATH
-
-def check_sum(card):
-    checksum = 0
-    for item in card.items():
-        c1 = 1
-        for t in item:
-            c1 = zlib.adler32(bytes(repr(t), "utf-8"), c1)
-        checksum = checksum ^ c1
-    return checksum
-
-def create_connection(db_path):
-    connection = None
-    try:
-        connection = sqlite3.connect(db_path)
-        return connection
-    except Error as e:
-        print(e)
-
-def get_table_columns(connection, table_name):
-    query = f'''
-    SELECT * FROM {table_name}_table LIMIT 1
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    names = list(map(lambda x: x[0], cursor.description))
-    return names
+from modules.database.functions import checksum_of_record, query_get_table_columns
 
 def alpha_load(connection):
-    available_columns = get_table_columns(connection, 'main')
-    #placeholders = ', '.join('?' * len(available_columns))
+    available_columns = query_get_table_columns(connection, 'main')
 
     with open('./downloads/Default Cards.json', 'r', encoding='utf8') as f:
         data = json.load(f)
@@ -40,7 +10,7 @@ def alpha_load(connection):
         insert_column_list = []
 
         for card in data[:20]:
-            checksum = check_sum(card)
+            checksum = checksum_of_record(card)
             found_atr = []
             found_col = []
             keys_list = card.keys()
