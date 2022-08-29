@@ -65,3 +65,13 @@ def query_delete_record(connection, table_name, id):
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
+
+def format_card_values(element):
+    result = []
+
+    for x in element:
+        if isinstance(x, int):
+            result.append(str(x))
+        else:
+            result.append(f"'{x}'")
+    return result

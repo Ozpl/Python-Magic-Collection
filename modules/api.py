@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import datetime
 from modules.settings import load_settings
-from modules.consts import SETTINGS_FILE_PATH
+from modules.consts import SETTINGS_JSON_PATH
 
 def get_bulk_data_response(url):
     request = requests.get(url)
@@ -15,7 +15,7 @@ def download_bulk_json_file(url, file_name):
         json.dump(response.json(), f, ensure_ascii=False, indent=4)
 
 def get_data_from_scryfall():
-    SETTINGS_JSON = load_settings(SETTINGS_FILE_PATH)
+    SETTINGS_JSON = load_settings(SETTINGS_JSON_PATH)
     bulk_response = get_bulk_data_response(SETTINGS_JSON['bulk_url'])
     bulk_data_type = SETTINGS_JSON['bulk_data_type']
     bulk_uri = [element['download_uri'] for element in bulk_response if element['name'] == bulk_data_type][0]
@@ -24,7 +24,7 @@ def get_data_from_scryfall():
 
     if time_difference > SETTINGS_JSON['bulk_time_period']:
         download_bulk_json_file(bulk_uri, bulk_data_type)
-        with open(SETTINGS_FILE_PATH, 'w', encoding='utf8') as f:
+        with open(SETTINGS_JSON_PATH, 'w', encoding='utf8') as f:
             file_content = SETTINGS_JSON
             file_content['bulk_last_updated'] = str(datetime.now().strftime(SETTINGS_JSON['time_format_full']))
             json.dump(file_content, f, ensure_ascii=False, indent=4)

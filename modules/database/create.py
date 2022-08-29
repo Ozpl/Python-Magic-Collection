@@ -1,7 +1,8 @@
 import sqlite3
-from modules.consts import DATABASE_PATH
+from modules.consts import DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS, DATABASE_SUBTABLES_NAMES_OBJECT
 
 def create_main_table(connection):
+    #for now we're missing 'set', 'preview.previewed_at', 'preview.source_uri', 'preview.source' columns
     query = '''
     CREATE TABLE IF NOT EXISTS main_table (
         id VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -18,112 +19,71 @@ def create_main_table(connection):
         rulings_uri VARCHAR(255),
         scryfall_uri VARCHAR(255),
         uri VARCHAR(255),
-
+        cmc INT,
+        edhrec_rank INT,
+        hand_modifier VARCHAR(255),
+        layout VARCHAR(255),
+        life_modifier VARCHAR(255),
+        loyalty VARCHAR(255),
+        mana_cost VARCHAR(255),
+        name VARCHAR(255),
+        oracle_text VARCHAR(255),
+        oversized VARCHAR(255),
+        penny_rank INT,
+        power VARCHAR(255),
+        reserved VARCHAR(255),
+        toughness VARCHAR(255),
+        type_line VARCHAR(255),
+        artist VARCHAR(255),
+        booster VARCHAR(255),
+        border_color VARCHAR(255),
+        card_back_id VARCHAR(255),
+        collector_number VARCHAR(255),
+        content_warning VARCHAR(255),
+        digital VARCHAR(255),
+        flavor_name VARCHAR(255),
+        flavor_text VARCHAR(255),
+        frame VARCHAR(255),
+        full_art VARCHAR(255),
+        highres_image VARCHAR(255),
+        illustration_id VARCHAR(255),
+        image_status VARCHAR(255),
+        printed_name VARCHAR(255),
+        printed_text VARCHAR(255),
+        printed_type_line VARCHAR(255),
+        promo VARCHAR(255),
+        rarity VARCHAR(255),
         released_at DATETIME,
-
+        reprint VARCHAR(255),
+        scryfall_set_uri VARCHAR(255),
+        set_name VARCHAR(255),
+        set_search_uri VARCHAR(255),
+        set_type VARCHAR(255),
+        set_uri VARCHAR(255),
+        "set" VARCHAR(255),
+        set_id VARCHAR(255),
+        story_spotlight VARCHAR(255),
+        textless VARCHAR(255),
+        variation VARCHAR(255),
+        variation_of VARCHAR(255),
+        security_stamp VARCHAR(255),
+        watermark VARCHAR(255),
         checksum BIGINT
     )
     '''
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
 
-    '''
-        ...all_parts
-        ...card_faces
-        cmc
-        color_identity
-        color_indicator
-        colors
-        edhrec_rank
-        hand_modifier
-        keywords
-        layout
-        legalities
-        life_modifier
-        loyalty
-        mana_cost
-        name
-        oracle_text
-        oversized
-        penny_rank
-        power
-        produced_mana
-        reserved
-        toughness
-        type_line
+def create_subt_array_of_objects(connection, subtable):
+    pass
 
-        artist
-        booster
-        border_color
-        card_back_id
-        collector_number
-        content_warning
-        digital
-        finishes
-        flavor_name
-        flavor_text
-        frame_effects
-        frame
-        full_art
-        games
-        highres_image
-        illustration_id
-        image_status
-        image_uris
-        prices
-        printed_name
-        printed_text
-        printed_type_line
-        promo
-        promo_types
-        purchase_uris
-        rarity
-        related_uris
-        released_at
-        reprint
-        scryfall_set_uri
-        set_name
-        set_search_uri
-        set_type
-        set_uri
-        set
-        set_id
-        story_spotlight
-        textless
-        variation
-        variation_of
-        security_stamp
-        watermark
-        preview.previewed_at
-        preview.source_uri
-        preview.source
-
-        artist
-        cmc
-        color_indicator
-        colors
-        flavor_text
-        illustration_id
-        image_uris
-        layout
-        loyalty
-        mana_cost
-        name
-        object
-        oracle_id
-        oracle_text
-        power
-        printed_name
-        printed_text
-        printed_type_line
-        toughness
-        type_line
-        watermark
-
-        id
-        object
-        component
-        name
-        type_line
-        uri        
+def create_subt_array(connection, subtable):
+    query = f'''
+    CREATE TABLE IF NOT EXISTS {subtable}_table (
+        id INTEGER NOT NULL PRIMARY KEY,
+        card_id VARCHAR(255) NOT NULL,
+        array_value VARCHAR(255) NOT NULL
     )
     '''
     
@@ -131,23 +91,39 @@ def create_main_table(connection):
     cursor.execute(query)
     connection.commit()
 
-def create_sub_table(connection, attribute):
-    #todo    
-    att_type = 'VARCHAR(255)'
+def create_subt_array_of_nested_objects(connection, subtable):
+    pass
 
-    match attribute:
-        case 'multiverse_id':
-            att_type = 'INT'
-
+def create_subt_object(connection, subtable):
+    columns = []
+    match subtable:
+        case 'image_uris':
+            columns = ['small', 'normal', 'large', 'png', 'art_crop', 'border_crop']
+        case 'legalities':
+            columns = ['standard', 'future', 'historic', 'gladiator', 'pioneer', 'explorer', 'modern', 'legacy', 'pauper', 'vintage', 'penny', 'commander', 'brawl', 'historicbrawl', 'alchemy', 'paupercommander', 'duel', 'oldschool', 'premodern']
+        case 'preview':
+            columns = ['source', 'source_uri', 'previewed_at']
+        case 'related_uris':
+            columns = ['gatherer', 'tcgplayer_infinite_articles', 'tcgplayer_infinite_decks', 'edhrec']
 
     query = f'''
-    CREATE TABLE IF NOT EXISTS {attribute}_table (
-        id INTEGER NOT NULL PRIMARY KEY,
-        main_id VARCHAR(255) NOT NULL,
-        value {att_type} NOT NULL
+    CREATE TABLE IF NOT EXISTS {subtable}_table (
+        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        card_id VARCHAR(255) NOT NULL,
+        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
     )
     '''
-        
+
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
+
+def create_sub_tables(connection):
+    for element in DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS:
+        create_subt_array_of_objects(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_ARRAY:
+        create_subt_array(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS:
+        create_subt_array_of_nested_objects(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_OBJECT:
+        create_subt_object(connection, element)
