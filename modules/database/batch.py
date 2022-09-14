@@ -68,4 +68,3 @@ def batch_load(connection):
         cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
-            

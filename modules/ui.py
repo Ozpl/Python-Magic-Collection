@@ -1,3 +1,4 @@
+from operator import and_
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont
@@ -47,23 +48,61 @@ class UI(QWidget):
 
     def create_filter_group_box(self) -> QGroupBox:
         filter_gbx = QGroupBox()
-        filter_lyt = QVBoxLayout()
-        filter_label = QLabel('FilterGroupBox -> FilterLayout -> FilterLabel')
-        filter_lyt.addWidget(filter_label)
+        filter_gbx.setMaximumHeight(35+27)
+        filter_lyt = QHBoxLayout()
+
+        for symbol in ['W', 'U', 'B', 'R', 'G', 'C']:
+            image_lbl = QLabel()
+            image = QPixmap(f'images/symbols/{symbol}.svg')
+            image_lbl.setPixmap(image)
+            image_lbl.setScaledContents(True)
+            image_lbl.setMaximumSize(35,35)
+            #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
+            image_lbl.setStyleSheet("")
+            filter_lyt.addWidget(image_lbl)
+
+        and_rbt = QRadioButton('And')
+        and_rbt.setChecked(True)
+        and_rbt.setMaximumSize(60,30)
+        #and_rbt.setSizePolicy(QSizePolicy.Policy)
+        filter_lyt.addWidget(and_rbt)
+        or_rbt = QRadioButton('Or')
+        or_rbt.setMaximumSize(60,30)
+        filter_lyt.addWidget(or_rbt)
+
+        for symbol in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
+            image_lbl = QLabel()
+            image = QPixmap(f'images/symbols/{symbol}.svg')
+            image_lbl.setPixmap(image)
+            image_lbl.setScaledContents(True)
+            image_lbl.setMaximumSize(35,35)
+            #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
+            image_lbl.setStyleSheet("")
+            filter_lyt.addWidget(image_lbl)
+
         filter_gbx.setLayout(filter_lyt)
         return filter_gbx
 
     def create_grid_group_box(self) -> QGroupBox:
         grid_gbx = QGroupBox()
-        grid_lyt = QVBoxLayout()
-        grid_label = QLabel('GridGroupBox -> GridLayout -> GridLabel')
-        grid_lyt.addWidget(grid_label)
+        grid_lyt = QHBoxLayout()
+
+        for i in range(5):
+            image_lbl = QLabel()
+            image = QPixmap(f'images/muldrotha.png')
+            image_lbl.setPixmap(image)
+            image_lbl.setScaledContents(True)
+            image_lbl.setMaximumSize(210,int(210*1.39))
+            grid_lyt.addWidget(image_lbl)
+        
         grid_gbx.setLayout(grid_lyt)
         return grid_gbx
 
     def create_page_controls_group_box(self) -> QGroupBox:
         page_controls_gbx = QGroupBox()
         page_controls_lyt = QVBoxLayout()
+        page_controls_gbx.setMaximumHeight(35+27)
+
         page_controls_label = QLabel('PageControlsGroupBox -> PageControlsLayout -> PageControlsLabel')
         page_controls_lyt.addWidget(page_controls_label)
         page_controls_gbx.setLayout(page_controls_lyt)
@@ -72,7 +111,15 @@ class UI(QWidget):
     def create_preview_layout(self, collection_tab_lyt: QHBoxLayout):
         preview_gbx = QGroupBox()
         preview_lyt = QHBoxLayout()
+
+        image_lbl = QLabel()
+        image = QPixmap(f'images/muldrotha.png')
+        image_lbl.setPixmap(image)
+        image_lbl.setScaledContents(True)
+        image_lbl.setMaximumSize(400,int(400*1.39))
+
         #create components
+        preview_lyt.addWidget(image_lbl)
         preview_gbx.setLayout(preview_lyt)
         collection_tab_lyt.addWidget(preview_gbx)
 

@@ -76,6 +76,7 @@ def create_main_table(connection):
     connection.commit()
 
 def create_subt_array_of_objects(connection, subtable):
+    #TODO
     pass
 
 def create_subt_array(connection, subtable):
@@ -83,7 +84,8 @@ def create_subt_array(connection, subtable):
     CREATE TABLE IF NOT EXISTS {subtable}_table (
         id INTEGER NOT NULL PRIMARY KEY,
         card_id VARCHAR(255) NOT NULL,
-        array_value VARCHAR(255) NOT NULL
+        array_value VARCHAR(255) NOT NULL,
+        checksum BIGINT
     )
     '''
     
@@ -92,6 +94,10 @@ def create_subt_array(connection, subtable):
     connection.commit()
 
 def create_subt_array_of_nested_objects(connection, subtable):
+    #TODO
+    '''
+    Zrobić jeden subtable z card_faces, colors spakować do jednej wartości, color indicators ma prawdopodobnie jeden symbol (do sprawdzenia), image_uris - czy w ogóle potrzebne (można samemu utworzyć link z id)
+    '''
     pass
 
 def create_subt_object(connection, subtable):
@@ -110,7 +116,8 @@ def create_subt_object(connection, subtable):
     CREATE TABLE IF NOT EXISTS {subtable}_table (
         id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         card_id VARCHAR(255) NOT NULL,
-        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
+        {', '.join([f'{element} VARCHAR(255)' for element in columns])},
+        checksum BIGINT
     )
     '''
 

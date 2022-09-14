@@ -6,6 +6,7 @@ class Deck:
         self.name = 'My Deck'
         self.format = 'Standard'
         self.isValid = False
+        self.tags = []
         self.cards = []
 
     def get_json(self):

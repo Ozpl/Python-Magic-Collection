@@ -12,11 +12,11 @@ from modules.database.functions import create_connection
 
 def build_database():
     if not os.path.exists('./database/database.db'):
-        with open('./database/database.db', 'w') as f: pass
+        with open('./database/database.db', 'w'): pass
     connection = create_connection(DATABASE_DB_PATH)
     create_main_table(connection)
     create_sub_tables(connection)
-    #alpha_load(connection)
+    alpha_load(connection)
     #batch_load(connection)
     connection.close()
 
@@ -30,7 +30,24 @@ build_database()
 manage_ui()
 
 #debug
-'''
+
 with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
     j = json.load(f)
-'''
+    count2 = 0
+    count3more = 0
+    maximum = 0
+    morethan2 = []
+    for element in j:
+        try:
+            if len(element['card_faces']) == 2:
+                count2 = count2 + 1
+            elif len(element['card_faces']) >= 3:
+                count3more = count3more + 1
+                morethan2.append(element['card_faces'])
+
+            if len(element['card_faces']) > maximum:
+                maximum = len(element['card_faces'])
+        except Exception:
+            pass
+
+    print(f'2: {count2}, 3>: {count3more}, maximum: {maximum}')
