@@ -68,7 +68,6 @@ def query_delete_record(connection, table_name, id):
 
 def format_card_values(element):
     result = []
-
     for x in element:
         if isinstance(x, int):
             result.append(str(x))

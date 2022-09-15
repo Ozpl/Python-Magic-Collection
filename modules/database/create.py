@@ -1,8 +1,7 @@
 import sqlite3
-from modules.consts import DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS, DATABASE_SUBTABLES_NAMES_OBJECT
+from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
 
 def create_main_table(connection):
-    #for now we're missing 'set', 'preview.previewed_at', 'preview.source_uri', 'preview.source' columns
     query = '''
     CREATE TABLE IF NOT EXISTS main_table (
         id VARCHAR(255) NOT NULL PRIMARY KEY,
@@ -75,30 +74,26 @@ def create_main_table(connection):
     cursor.execute(query)
     connection.commit()
 
-def create_subt_array_of_objects(connection, subtable):
+def create_subt_exceptions(connection, subtable):
     #TODO
+    '''
+    Zrobić jeden subtable z card_faces, colors spakować do jednej wartości, color indicators ma prawdopodobnie jeden symbol (do sprawdzenia), image_uris - czy w ogóle potrzebne (można samemu utworzyć link z id)
+    Zrobić jeden subtable z all_parts
+    '''
     pass
 
 def create_subt_array(connection, subtable):
     query = f'''
     CREATE TABLE IF NOT EXISTS {subtable}_table (
-        id INTEGER NOT NULL PRIMARY KEY,
+        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         card_id VARCHAR(255) NOT NULL,
-        array_value VARCHAR(255) NOT NULL,
-        checksum BIGINT
+        array_value VARCHAR(255) NOT NULL
     )
     '''
     
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
-
-def create_subt_array_of_nested_objects(connection, subtable):
-    #TODO
-    '''
-    Zrobić jeden subtable z card_faces, colors spakować do jednej wartości, color indicators ma prawdopodobnie jeden symbol (do sprawdzenia), image_uris - czy w ogóle potrzebne (można samemu utworzyć link z id)
-    '''
-    pass
 
 def create_subt_object(connection, subtable):
     columns = []
@@ -107,17 +102,18 @@ def create_subt_object(connection, subtable):
             columns = ['small', 'normal', 'large', 'png', 'art_crop', 'border_crop']
         case 'legalities':
             columns = ['standard', 'future', 'historic', 'gladiator', 'pioneer', 'explorer', 'modern', 'legacy', 'pauper', 'vintage', 'penny', 'commander', 'brawl', 'historicbrawl', 'alchemy', 'paupercommander', 'duel', 'oldschool', 'premodern']
-        case 'preview':
-            columns = ['source', 'source_uri', 'previewed_at']
+        case 'prices':
+            columns = ['usd', 'usd_foil', 'usd_etched', 'eur', 'eur_foil', 'tix']
         case 'related_uris':
             columns = ['gatherer', 'tcgplayer_infinite_articles', 'tcgplayer_infinite_decks', 'edhrec']
+        case 'preview':
+            columns = ['source', 'source_uri', 'previewed_at']
 
     query = f'''
     CREATE TABLE IF NOT EXISTS {subtable}_table (
-        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
         card_id VARCHAR(255) NOT NULL,
-        {', '.join([f'{element} VARCHAR(255)' for element in columns])},
-        checksum BIGINT
+        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
     )
     '''
 
@@ -126,11 +122,9 @@ def create_subt_object(connection, subtable):
     connection.commit()
 
 def create_sub_tables(connection):
-    for element in DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS:
-        create_subt_array_of_objects(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
+        create_subt_exceptions(connection, element)
     for element in DATABASE_SUBTABLES_NAMES_ARRAY:
         create_subt_array(connection, element)
-    for element in DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS:
-        create_subt_array_of_nested_objects(connection, element)
     for element in DATABASE_SUBTABLES_NAMES_OBJECT:
         create_subt_object(connection, element)

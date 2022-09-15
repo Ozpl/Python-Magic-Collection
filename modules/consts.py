@@ -7,8 +7,9 @@ APP_FOLDER_STRUCTURE = {
     'downloads': 'downloads',
     'images': 'images',
 }
-DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS = [
-    'all_parts'
+DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
+    'all_parts',
+    'card_faces'
 ]
 DATABASE_SUBTABLES_NAMES_ARRAY = [
     'artist_ids',
@@ -20,18 +21,15 @@ DATABASE_SUBTABLES_NAMES_ARRAY = [
     'games',
     'keywords',
     'multiverse_ids',
-    'prices',
     'produced_mana',
     'promo_types',
-]
-DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS = [
-    'card_faces'
 ]
 DATABASE_SUBTABLES_NAMES_OBJECT = [
     'image_uris',
     'legalities',
-    'preview',
+    'prices',
     'related_uris',
+    'preview',
 ]
 UI_TAB_NAMES = [
     'Collections',

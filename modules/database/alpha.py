@@ -1,7 +1,6 @@
-from distutils.util import subst_vars
 import json
 from modules.database.functions import checksum_of_record, query_get_table_columns, format_card_values
-from modules.consts import DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS, DATABASE_SUBTABLES_NAMES_OBJECT
+from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
 
 def alpha_load(connection):
     available_columns = query_get_table_columns(connection, 'main')
@@ -40,26 +39,21 @@ def alpha_load(connection):
         '''
 
         cursor = connection.cursor()
-        #cursor.execute(query, format_card_values(element))
+        cursor.execute(query, format_card_values(element))
         connection.commit()
 
     for element in cards_sub_tables.keys():
-        checksum = ''
         for sub_table_name in cards_sub_tables[element].keys():
             value = cards_sub_tables[element][sub_table_name]
-            if sub_table_name in DATABASE_SUBTABLES_NAMES_ARRAY_OF_OBJECTS:
+            if sub_table_name in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
                 pass
             elif sub_table_name in DATABASE_SUBTABLES_NAMES_ARRAY:
-                query_sub_table_array(connection, element, sub_table_name, value, checksum)
-            elif sub_table_name in DATABASE_SUBTABLES_NAMES_ARRAY_OF_NESTED_OBJECTS:
-                pass
+                query_sub_table_array(connection, element, sub_table_name, value)
             elif sub_table_name in DATABASE_SUBTABLES_NAMES_OBJECT:
-                query_sub_table_object(connection, element, sub_table_name, value, checksum)
-            elif sub_table_name == 'checksum':
-                checksum = value
+                query_sub_table_object(connection, element, sub_table_name, value)
         pass
 
-def query_sub_table_array(connection, card_id, sub_table_name, value, checksum):
+def query_sub_table_array(connection, card_id, sub_table_name, value):
     column_names = query_get_table_columns(connection, sub_table_name)[1:]
 
     placeholders = ', '.join('?' * len(column_names))
@@ -68,12 +62,12 @@ def query_sub_table_array(connection, card_id, sub_table_name, value, checksum):
     '''
 
     cursor = connection.cursor()
-    #cursor.execute(query, [card_id, ','.join(format_card_values(value)), checksum])
+    cursor.execute(query, [card_id, ','.join(format_card_values(value))])
     connection.commit()
 
-def query_sub_table_object(connection, card_id, sub_table_name, value, checksum):
-    column_names = ['card_id', *value.keys(), 'checksum']
-    unpacked_dict = [card_id, *[value[element] for element in value.keys()], checksum]
+def query_sub_table_object(connection, card_id, sub_table_name, value):
+    column_names = ['card_id', *value.keys()]
+    unpacked_dict = [card_id, *[value[element] for element in value.keys()]]
 
     placeholders = ', '.join('?' * len(column_names))
     query = f'''
