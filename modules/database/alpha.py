@@ -11,7 +11,7 @@ def alpha_load(connection):
         insert_column_list = []
         cards_sub_tables = {}
 
-        for card in data[:20]:
+        for card in data[:300]:
             checksum = checksum_of_record(card)
             cards_sub_tables[card['id']] = {'checksum': checksum}
             found_atr = []
@@ -46,12 +46,47 @@ def alpha_load(connection):
         for sub_table_name in cards_sub_tables[element].keys():
             value = cards_sub_tables[element][sub_table_name]
             if sub_table_name in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
-                pass
+                if sub_table_name == 'all_parts':
+                    query_sub_table_all_parts(connection, element, sub_table_name, value)
+                elif sub_table_name == 'card_faces':
+                    query_sub_table_card_faces(connection, element, sub_table_name, value)
             elif sub_table_name in DATABASE_SUBTABLES_NAMES_ARRAY:
                 query_sub_table_array(connection, element, sub_table_name, value)
             elif sub_table_name in DATABASE_SUBTABLES_NAMES_OBJECT:
                 query_sub_table_object(connection, element, sub_table_name, value)
         pass
+
+def query_sub_table_all_parts(connection, card_id, sub_table_name, value):
+    column_names = query_get_table_columns(connection, sub_table_name)[1:]
+    
+    for element in value:
+        placeholders = ', '.join('?' * len(column_names))
+        query = f'''
+        INSERT INTO {sub_table_name}_table({', '.join(column_names)}) VALUES ({placeholders})
+        '''
+
+        cursor = connection.cursor()
+        cursor.execute(query, [card_id, *[element[x] for x in element.keys()]])
+        connection.commit()
+
+def query_sub_table_card_faces(connection, card_id, sub_table_name, value):
+    for face in value:
+        column_names = ['card_id', *face.keys()]
+        unpacked_dict = [card_id, *[face[element] for element in face.keys()]]
+        #delete image_uris for now
+        for i, x in enumerate(column_names):
+            if x == 'image_uris':
+                del column_names[i]
+                del unpacked_dict[i]
+
+        placeholders = ', '.join('?' * len(column_names))
+        query = f'''
+        INSERT INTO {sub_table_name}_table({', '.join(column_names)}) VALUES ({placeholders})
+        '''
+
+        cursor = connection.cursor()
+        cursor.execute(query, format_card_values(unpacked_dict))
+        connection.commit()
 
 def query_sub_table_array(connection, card_id, sub_table_name, value):
     column_names = query_get_table_columns(connection, sub_table_name)[1:]

@@ -1,7 +1,8 @@
 import json, os
+from xml.dom.minidom import Element
 from modules.consts import SETTINGS_JSON_PATH, DATABASE_DB_PATH
 from modules.settings import check_if_settings_exist, build_folder_structure, load_settings
-from modules.ui import manage_ui
+from modules.ui import create_user_interface
 from modules.api import get_data_from_scryfall
 from modules.collection import create_default_collection
 from modules.deck import create_default_deck
@@ -22,20 +23,19 @@ def build_database():
 
 build_folder_structure()
 check_if_settings_exist(SETTINGS_JSON_PATH)
-#settings = load_settings() - unnecessary for now
+#settings = load_settings() #unnecessary for now
 get_data_from_scryfall()
 create_default_collection()
 create_default_deck()
 build_database()
-manage_ui()
+#create_user_interface()
 
 #debug
-'''
+
 with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
     j = json.load(f)
-    for element in j:
+    for i, element in enumerate(j):
         try:
-            pass
+            break
         except Exception:
             pass
-'''

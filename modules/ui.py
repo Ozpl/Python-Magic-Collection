@@ -1,136 +1,202 @@
-from operator import and_
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, QPoint
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont
-from modules.consts import UI_TAB_NAMES
-#from consts import UI_TAB_NAMES
+from modules.consts import APP_NAME, APP_STYLE, APP_TAB_NAMES
+
+app = QApplication([])
+
+collection_tab = QWidget()
+collection_tab_lyt = QHBoxLayout()
+
+cards_gbx = QGroupBox()
+cards_lyt = QVBoxLayout()
+
+filter_gbx = QGroupBox()
+filter_lyt = QHBoxLayout()
+filter_colors_lbls = []
+filter_colors_flags = []
+filter_and_rbt = QRadioButton('And')
+filter_or_rbt = QRadioButton('Or')
+filter_mv = []
+filter_search_lbl = QLabel('Search box:')
+filter_search_txb = QLineEdit()
+
+page_controls_gbx = QGroupBox()
+page_controls_lyt = QVBoxLayout()
+
+preview_gbx = QGroupBox()
+preview_lyt = QHBoxLayout()
+
+def create_user_interface():
+    ui = UI()
+    ui.showMaximized()
+    app.exec()
 
 class UI(QWidget):
     def __init__(self, parent=None) -> None:
         super(UI, self).__init__(parent)
 
-        self.color_palette = QApplication.palette()
-        
         self.app_layout = QHBoxLayout()
 
         self.tab_bar = QTabWidget()
-        self.collection_tab = self.create_collection_tab()
-        self.tab_bar.addTab(self.collection_tab, 'Collection')
-
-        #todo
-        decks_tab = QWidget()
-        decks_lyt = QVBoxLayout()
-        decks_tab.setLayout(decks_lyt)
-        self.tab_bar.addTab(decks_tab, 'Decks')
+        create_collection_tab(self.tab_bar)
+        create_decks_tab(self.tab_bar)
+        create_add_tab(self.tab_bar)
+        create_import_export_tab(self.tab_bar)
+        create_settings_tab(self.tab_bar)
 
         self.app_layout.addWidget(self.tab_bar)
         self.setLayout(self.app_layout)
         
-        self.setWindowTitle('Python Magic Collection')
-        QApplication.setStyle('Fusion')
+        self.setWindowTitle(APP_NAME)
+        QApplication.setStyle(APP_STYLE)
 
-    def create_collection_tab(self) -> QWidget:
-        collection_tab = QWidget()
-        collection_tab_lyt = QHBoxLayout()
-        self.create_cards_layout(collection_tab_lyt)
-        self.create_preview_layout(collection_tab_lyt)
-        collection_tab.setLayout(collection_tab_lyt)
-        return collection_tab
+def create_collection_tab(tab_widget) -> QWidget:
+    create_cards_layout(collection_tab_lyt)
+    create_preview_layout(collection_tab_lyt)
+    
+    collection_tab.setLayout(collection_tab_lyt)
+    tab_widget.addTab(collection_tab, APP_TAB_NAMES[0])
 
-    def create_cards_layout(self, collection_tab_lyt: QHBoxLayout):
-        cards_gbx = QGroupBox()
-        cards_lyt = QVBoxLayout()
-        cards_lyt.addWidget(self.create_filter_group_box())
-        cards_lyt.addWidget(self.create_grid_group_box())
-        cards_lyt.addWidget(self.create_page_controls_group_box())
-        cards_gbx.setLayout(cards_lyt)
-        collection_tab_lyt.addWidget(cards_gbx)
+def create_cards_layout(collection_tab_lyt: QHBoxLayout):
+    cards_lyt.addWidget(create_filter_group_box())
+    cards_lyt.addWidget(create_grid_group_box())
+    cards_lyt.addWidget(create_page_controls_group_box())
+    cards_gbx.setLayout(cards_lyt)
+    collection_tab_lyt.addWidget(cards_gbx)
 
-    def create_filter_group_box(self) -> QGroupBox:
-        filter_gbx = QGroupBox()
-        filter_gbx.setMaximumHeight(35+27)
-        filter_lyt = QHBoxLayout()
+def create_filter_group_box() -> QGroupBox:
+    filter_gbx.setMaximumHeight(35+27)
 
-        for symbol in ['W', 'U', 'B', 'R', 'G', 'C']:
-            image_lbl = QLabel()
-            image = QPixmap(f'images/symbols/{symbol}.svg')
-            image_lbl.setPixmap(image)
-            image_lbl.setScaledContents(True)
-            image_lbl.setMaximumSize(35,35)
-            #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
-            image_lbl.setStyleSheet("")
-            filter_lyt.addWidget(image_lbl)
+    for symbol in ['W', 'U', 'B', 'R', 'G', 'C']:
+        image_lbl = QLabel()
+        image_lbl.setObjectName(symbol)
+        image = QPixmap(f'images/symbols/{symbol}.svg')
+        image_lbl.setPixmap(image)
+        image_lbl.setScaledContents(True)
+        image_lbl.setMaximumSize(35,35)
+        #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
+        image_lbl.setStyleSheet("")
+        filter_colors_lbls.append(image_lbl)
+        image_lbl.mousePressEvent = test_mouse_pressed_event
+        filter_lyt.addWidget(image_lbl)
 
-        and_rbt = QRadioButton('And')
-        and_rbt.setChecked(True)
-        and_rbt.setMaximumSize(60,30)
-        #and_rbt.setSizePolicy(QSizePolicy.Policy)
-        filter_lyt.addWidget(and_rbt)
-        or_rbt = QRadioButton('Or')
-        or_rbt.setMaximumSize(60,30)
-        filter_lyt.addWidget(or_rbt)
+    filter_and_rbt.setChecked(True)
+    filter_and_rbt.setMaximumSize(60,30)
+    #and_rbt.setSizePolicy(QSizePolicy.Policy)
+    filter_lyt.addWidget(filter_and_rbt)
+    filter_or_rbt.setMaximumSize(60,30)
+    filter_lyt.addWidget(filter_or_rbt)
 
-        for symbol in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
-            image_lbl = QLabel()
-            image = QPixmap(f'images/symbols/{symbol}.svg')
-            image_lbl.setPixmap(image)
-            image_lbl.setScaledContents(True)
-            image_lbl.setMaximumSize(35,35)
-            #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
-            image_lbl.setStyleSheet("")
-            filter_lyt.addWidget(image_lbl)
+    for symbol in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']:
+        image_lbl = QLabel()
+        image = QPixmap(f'images/symbols/{symbol}.svg')
+        image_lbl.setObjectName(symbol)
+        image_lbl.setPixmap(image)
+        image_lbl.setScaledContents(True)
+        image_lbl.setMaximumSize(35,35)
+        #image_lbl.setStyleSheet("background-image: url(./images/muldrotha.png)")
+        image_lbl.setStyleSheet("")
+        filter_mv.append(image_lbl)
+        image_lbl.mousePressEvent = test_mouse_pressed_event
+        filter_lyt.addWidget(image_lbl)
 
-        filter_gbx.setLayout(filter_lyt)
-        return filter_gbx
+    filter_lyt.addWidget(filter_search_lbl)
 
-    def create_grid_group_box(self) -> QGroupBox:
-        grid_gbx = QGroupBox()
-        grid_lyt = QHBoxLayout()
+    filter_search_txb.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+    filter_search_txb.setMinimumWidth(200)
+    filter_lyt.addWidget(filter_search_txb)
 
-        for i in range(5):
-            image_lbl = QLabel()
-            image = QPixmap(f'images/muldrotha.png')
-            image_lbl.setPixmap(image)
-            image_lbl.setScaledContents(True)
-            image_lbl.setMaximumSize(210,int(210*1.39))
-            grid_lyt.addWidget(image_lbl)
-        
-        grid_gbx.setLayout(grid_lyt)
-        return grid_gbx
+    filter_gbx.setLayout(filter_lyt)
+    return filter_gbx
 
-    def create_page_controls_group_box(self) -> QGroupBox:
-        page_controls_gbx = QGroupBox()
-        page_controls_lyt = QVBoxLayout()
-        page_controls_gbx.setMaximumHeight(35+27)
+def test_mouse_pressed_event(event):
+    #from mapToGlobal and widgets size you can grab which image was pressed
+    for element in (filter_colors_lbls + filter_mv):
+        mouse_x = event.globalPos().x()
+        mouse_y = event.globalPos().y()
+        element_x = element.mapToGlobal(QPoint(0, 0)).x()
+        element_y = element.mapToGlobal(QPoint(0, 0)).y()
+        element_w = element.width()
+        element_h = element.height()
+        if mouse_x > element_x and mouse_x < (element_x + element_w) and mouse_y > element_y and mouse_y < (element_y + element_h):
+            if element in filter_colors_flags:
+                element.setStyleSheet("background-color: rgba(0, 0, 0, 0)")
+                del filter_colors_flags[filter_colors_flags.index(element)]
+            else:
+                element.setStyleSheet("background-color: rgb(250, 0, 150)")
+                filter_colors_flags.append(element)
 
-        page_controls_label = QLabel('PageControlsGroupBox -> PageControlsLayout -> PageControlsLabel')
-        page_controls_lyt.addWidget(page_controls_label)
-        page_controls_gbx.setLayout(page_controls_lyt)
-        return page_controls_gbx
+def create_grid_group_box() -> QGroupBox:
+    grid_gbx = QGroupBox()
+    grid_lyt = QHBoxLayout()
 
-    def create_preview_layout(self, collection_tab_lyt: QHBoxLayout):
-        preview_gbx = QGroupBox()
-        preview_lyt = QHBoxLayout()
-
+    for i in range(5):
         image_lbl = QLabel()
         image = QPixmap(f'images/muldrotha.png')
         image_lbl.setPixmap(image)
         image_lbl.setScaledContents(True)
-        image_lbl.setMaximumSize(400,int(400*1.39))
+        image_lbl.setMaximumSize(210,int(210*1.39))
+        grid_lyt.addWidget(image_lbl)
+    
+    grid_gbx.setLayout(grid_lyt)
+    return grid_gbx
 
-        #create components
-        preview_lyt.addWidget(image_lbl)
-        preview_gbx.setLayout(preview_lyt)
-        collection_tab_lyt.addWidget(preview_gbx)
+def create_page_controls_group_box() -> QGroupBox:
+    page_controls_gbx.setMaximumHeight(35+27)
 
-def manage_ui():
-    app = QApplication([])
-    ui = UI()
-    ui.showMaximized()
-    app.exec()
+    page_controls_label = QLabel('PageControlsGroupBox -> PageControlsLayout -> PageControlsLabel')
+    page_controls_lyt.addWidget(page_controls_label)
+    page_controls_gbx.setLayout(page_controls_lyt)
+    return page_controls_gbx
 
-#debug
-#manage_ui()
+def create_preview_layout(collection_tab_lyt: QHBoxLayout):
+    image_lbl = QLabel()
+    image = QPixmap(f'images/muldrotha.png')
+    image_lbl.setPixmap(image)
+    image_lbl.setScaledContents(True)
+    image_lbl.setMaximumSize(400,int(400*1.39))
+
+    #create components
+    preview_lyt.addWidget(image_lbl)
+    preview_gbx.setLayout(preview_lyt)
+    collection_tab_lyt.addWidget(preview_gbx)
+
+def create_decks_tab(tab_widget) -> QWidget:
+    decks_tab = QWidget()
+    decks_tab_lyt = QHBoxLayout()
+
+    #TODO
+    
+    decks_tab.setLayout(decks_tab_lyt)
+    tab_widget.addTab(decks_tab, APP_TAB_NAMES[1])
+
+def create_add_tab(tab_widget) -> QWidget:
+    add_tab = QWidget()
+    add_tab_lyt = QHBoxLayout()
+
+    #TODO
+    
+    add_tab.setLayout(add_tab_lyt)
+    tab_widget.addTab(add_tab, APP_TAB_NAMES[2])
+
+def create_import_export_tab(tab_widget) -> QWidget:
+    import_export_tab = QWidget()
+    import_export_tab_lyt = QHBoxLayout()
+
+    #TODO
+    
+    import_export_tab.setLayout(import_export_tab_lyt)
+    tab_widget.addTab(import_export_tab, APP_TAB_NAMES[3])
+
+def create_settings_tab(tab_widget) -> QWidget:
+    settings_tab = QWidget()
+    settings_tab_lyt = QHBoxLayout()
+
+    #TODO
+    
+    settings_tab.setLayout(settings_tab_lyt)
+    tab_widget.addTab(settings_tab, APP_TAB_NAMES[4])
 
 '''
 *MainWindow
@@ -150,115 +216,4 @@ def manage_ui():
 ****CardDesc
 ****CardQuantities
 ****CardTags
-'''
-
-'''
-class UI(QWidget):
-    def __init__(self, parent=None) -> None:
-        super(UI, self).__init__(parent)
-
-        self.color_palette = QApplication.palette()
-
-        collecion_combo_box = QComboBox()
-        collecion_combo_box.addItems(['Col1', 'Col2'])
-
-        collection_label = QLabel('Current Collection:')
-        collection_label.setBuddy(collecion_combo_box)
-
-        self.create_main_panel()
-        self.create_preview_panel()
-
-        preview_layout = QVBoxLayout()
-        preview_layout.addWidget(self.preview_group_box)
-
-        main_layout = QHBoxLayout()
-        main_layout.addWidget(self.main_group_box)
-        main_layout.addLayout(preview_layout)
-
-        self.setLayout(main_layout)
-
-        self.setWindowTitle('Python Magic Collection')
-        QApplication.setStyle('Fusion')
-
-    def create_collection_grid(self):
-        collection_grid = QGridLayout()
-
-        for i in range(0,9):
-            for j in range(0,6,2):
-                label = QLabel(f'Muldrotha: Kolumna: {i} Wiersz: {j}')
-                image_label = QLabel()
-                image = QPixmap('images/muldrotha.png')
-                image_label.setPixmap(image)
-                image_label.setScaledContents(True)
-                image_label.setMinimumSize(215,int(215*1.39))
-                image_label.setMaximumSize(215,int(215*1.39))
-                collection_grid.addWidget(label, j, i)
-                collection_grid.addWidget(image_label, j+1, i)
-        return collection_grid
-        
-
-    def create_main_panel(self):
-        self.main_group_box = QGroupBox()
-
-        tab_bar = QTabWidget()
-        font = tab_bar.font()
-        font.setPixelSize(32)
-        tab_bar.setFont(font)
-
-        tab1 = QWidget()
-        font = tab_bar.font()
-        font.setPixelSize(12)
-        tab1.setFont(font)
-        tab1_hbox = QHBoxLayout()
-        tab1_hbox.setContentsMargins(5, 5, 5, 5)
-        tab1_hbox.addLayout(self.create_collection_grid())
-        tab1.setLayout(tab1_hbox)
-        tab_bar.addTab(tab1, 'Collection')
-
-        tab2 = QWidget()
-        font = tab_bar.font()
-        font.setPixelSize(12)
-        tab2.setFont(font)
-        tab2_text_edit = QTextEdit()
-        tab2_hbox = QHBoxLayout()
-        tab2_hbox.setContentsMargins(5, 5, 5, 5)
-        tab2_hbox.addWidget(tab2_text_edit)
-        tab2.setLayout(tab2_hbox)
-        tab_bar.addTab(tab2, 'Decks')
-
-        for element in UI_TAB_NAMES[2:]:
-            tab_bar.addTab(QWidget(), element)
-
-        layout = QVBoxLayout()
-        layout.addWidget(tab_bar)
-        self.main_group_box.setLayout(layout)
-        
-    def create_preview_panel(self):
-        self.preview_group_box = QGroupBox()
-        self.preview_group_box.setMinimumWidth(350)
-        self.preview_group_box.setMaximumWidth(350)
-
-        combo = QComboBox()
-        font = combo.font()
-        font.setPixelSize(28)
-        combo.setFont(font)
-        combo.addItems(['Collection 1', 'Collection 2', 'Collection 3'])
-        combo.setMaximumHeight(60)
-
-        image_label = QLabel()
-        image = QPixmap('images/muldrotha.png')
-        image_label.setPixmap(image)
-        image_label.setScaledContents(True)
-        image_label.setMaximumSize(350-20,int(350*1.396))
-
-        text = QTextBrowser()
-        text.setMinimumSize(200,int(200*1.396))
-        text.setMaximumWidth(350)
-        text.setPlainText('Muldrotha\nTest card')
-
-        layout = QVBoxLayout()
-        layout.addWidget(combo)
-        layout.addWidget(image_label)
-        layout.addWidget(text)
-        self.preview_group_box.setLayout(layout)
 '''

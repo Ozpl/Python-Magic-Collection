@@ -75,12 +75,30 @@ def create_main_table(connection):
     connection.commit()
 
 def create_subt_exceptions(connection, subtable):
-    #TODO
-    '''
-    Zrobić jeden subtable z card_faces, colors spakować do jednej wartości, color indicators ma prawdopodobnie jeden symbol (do sprawdzenia), image_uris - czy w ogóle potrzebne (można samemu utworzyć link z id)
-    Zrobić jeden subtable z all_parts
-    '''
-    pass
+    if subtable == 'all_parts':
+        columns = ['object', 'id', 'component', 'name', 'type_line', 'uri']
+        query = f'''
+        CREATE TABLE IF NOT EXISTS {subtable}_table (
+            db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            card_id VARCHAR(255) NOT NULL,
+            {', '.join([f'{element} VARCHAR(255)' for element in columns])}
+        )
+        '''
+
+    elif subtable == 'card_faces':
+        #'image_uris' is skipped for now
+        columns = ['artist', 'artist_id', 'cmc', 'color_indicator', 'colors', 'flavor_name', 'flavor_text', 'illustration_id', 'layout', 'loyalty', 'mana_cost', 'name', 'object', 'oracle_id', 'oracle_text', 'power', 'printed_name', 'printed_text', 'printed_type_line', 'toughness', 'type_line', 'watermark']
+        query = f'''
+        CREATE TABLE IF NOT EXISTS {subtable}_table (
+            db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            card_id VARCHAR(255) NOT NULL,
+            {', '.join([f'{element} VARCHAR(255)' for element in columns])}
+        )
+        '''
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
 
 def create_subt_array(connection, subtable):
     query = f'''
