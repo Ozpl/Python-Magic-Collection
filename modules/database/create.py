@@ -31,6 +31,8 @@ def create_main_table(connection):
         penny_rank INT,
         power VARCHAR(255),
         reserved VARCHAR(255),
+        foil VARCHAR(255),
+        nonfoil VARCHAR(255),
         toughness VARCHAR(255),
         type_line VARCHAR(255),
         artist VARCHAR(255),
@@ -86,8 +88,7 @@ def create_subt_exceptions(connection, subtable):
         '''
 
     elif subtable == 'card_faces':
-        #'image_uris' is skipped for now
-        columns = ['artist', 'artist_id', 'cmc', 'color_indicator', 'colors', 'flavor_name', 'flavor_text', 'illustration_id', 'layout', 'loyalty', 'mana_cost', 'name', 'object', 'oracle_id', 'oracle_text', 'power', 'printed_name', 'printed_text', 'printed_type_line', 'toughness', 'type_line', 'watermark']
+        columns = ['object', 'name', 'mana_cost', 'type_line', 'oracle_text', 'colors', 'artist', 'artist_id', 'illustration_id', 'image_uris', 'flavor_name', 'watermark', 'power', 'toughness', 'color_indicator', 'loyalty', 'flavor_text', 'oracle_id', 'layout', 'cmc', 'printed_name', 'printed_type_line', 'printed_text']
         query = f'''
         CREATE TABLE IF NOT EXISTS {subtable}_table (
             db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,

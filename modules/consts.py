@@ -7,7 +7,10 @@ APP_FOLDER_STRUCTURE = {
     'database': 'database',
     'decks': 'decks',
     'downloads': 'downloads',
-    'images': 'images'
+    'images': 'images',
+    'cards': 'images/cards',
+    'symbols': 'images/symbols',
+    'sets': 'images/sets'
 }
 DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
     'all_parts',

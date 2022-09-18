@@ -1,5 +1,4 @@
 import json, os
-from xml.dom.minidom import Element
 from modules.consts import SETTINGS_JSON_PATH, DATABASE_DB_PATH
 from modules.settings import check_if_settings_exist, build_folder_structure, load_settings
 from modules.ui import create_user_interface
@@ -31,11 +30,17 @@ build_database()
 #create_user_interface()
 
 #debug
-
+'''
 with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
     j = json.load(f)
+    keys = []
     for i, element in enumerate(j):
         try:
-            break
+            #if element['name'] == 'Arlinn Kord // Arlinn, Embraced by the Moon':
+            for key in element.keys():
+                if key not in keys:
+                    keys.append(key)
         except Exception:
             pass
+    print(keys)
+'''

@@ -33,5 +33,5 @@ def load_settings(file_path):
 
 def build_folder_structure():
     for element in APP_FOLDER_STRUCTURE:
-        if not path.exists(f'./{element}'):
-            os.mkdir(f'./{element}')
+        if not path.exists(f'./{APP_FOLDER_STRUCTURE[element]}'):
+            os.mkdir(f'./{APP_FOLDER_STRUCTURE[element]}')
