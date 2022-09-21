@@ -1,7 +1,6 @@
 import sqlite3
 from sqlite3 import Error
 import zlib
-from datetime import datetime
 from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
 
 def create_connection(db_path):
@@ -83,13 +82,12 @@ def query_sub_table_card_faces(connection, card_id, sub_table_name, value):
         column_names = ['card_id', *face.keys()]
         unpacked_dict = [card_id, *[face[element] for element in face.keys()]]
 
-        '''
-        #delete image_uris
-        for i, x in enumerate(column_names):
-            if x == 'image_uris':
+        #put image_uris from here to another subtable card_faces_image_uris
+        for i, element in enumerate(column_names):
+            if element == 'image_uris':
+                query_sub_table_object(connection, card_id, 'card_faces_image_uris', unpacked_dict[i])
                 del column_names[i]
                 del unpacked_dict[i]
-        '''
 
         placeholders = ', '.join('?' * len(column_names))
         query = f'''
@@ -162,25 +160,6 @@ def query_get_table_columns(connection, table_name):
     names = list(map(lambda x: x[0], cursor.description))
     return names
 
-def query_get_max_date(connection, table_name):
-    query = f'''
-    SELECT MAX(released_at) FROM {table_name}_table
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    max_date = cursor.fetchone()[0]
-    return datetime.strptime(max_date, '%Y-%m-%d')
-
-def query_get_card_from_db(connection, table_name, id):
-    query = f'''
-    SELECT * FROM {table_name}_table
-    WHERE id = '{id}'
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    record = cursor.fetchall()[0]
-    return record
-
 def query_get_id_and_checksum(connection, table_name):
     query = f'''
     SELECT id, checksum FROM {table_name}_table
@@ -191,20 +170,11 @@ def query_get_id_and_checksum(connection, table_name):
     record_dict = {element[0].replace("'", ""): element[1] for element in record}
     return record_dict
 
-def query_delete_record(connection, table_name, id):
-    query = f'''
-    DELETE FROM {table_name}_table
-    WHERE id = '{id}'
-    '''
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
-
 def format_card_values(element):
     result = []
     for x in element:
         if isinstance(x, int):
             result.append(str(x))
         else:
-            result.append(f"{x}")
+            result.append(f'{x}')
     return result

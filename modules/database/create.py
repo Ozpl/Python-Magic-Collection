@@ -76,6 +76,14 @@ def create_main_table(connection):
     cursor.execute(query)
     connection.commit()
 
+def create_sub_tables(connection):
+    for element in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
+        create_subt_exceptions(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_ARRAY:
+        create_subt_array(connection, element)
+    for element in DATABASE_SUBTABLES_NAMES_OBJECT:
+        create_subt_object(connection, element)
+
 def create_subt_exceptions(connection, subtable):
     if subtable == 'all_parts':
         columns = ['object', 'id', 'component', 'name', 'type_line', 'uri']
@@ -97,6 +105,19 @@ def create_subt_exceptions(connection, subtable):
         )
         '''
     
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
+
+    #image_uris in card_face subtable
+    columns = ['small', 'normal', 'large', 'png', 'art_crop', 'border_crop']
+    query = f'''
+    CREATE TABLE IF NOT EXISTS card_faces_image_uris_table (
+        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+        card_id VARCHAR(255) NOT NULL,
+        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
+    )
+    '''
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
@@ -139,11 +160,3 @@ def create_subt_object(connection, subtable):
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
-
-def create_sub_tables(connection):
-    for element in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
-        create_subt_exceptions(connection, element)
-    for element in DATABASE_SUBTABLES_NAMES_ARRAY:
-        create_subt_array(connection, element)
-    for element in DATABASE_SUBTABLES_NAMES_OBJECT:
-        create_subt_object(connection, element)
