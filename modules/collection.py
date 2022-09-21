@@ -20,6 +20,10 @@ class CardInCollection:
         self.regular = 0
         self.foil = 0
         self.tags = []
+        self.filter = {
+            #https://scryfall.com/docs/syntax
+            #How to handle filtering - with dict or query to db?
+        }
 
 def create_default_collection():
     if len(os.listdir('./collections')) <= 0:

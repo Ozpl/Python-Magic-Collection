@@ -1,7 +1,7 @@
 import os
+from os import path
 import json
 from datetime import datetime, timedelta
-from os import path
 from modules.consts import APP_FOLDER_STRUCTURE
 
 class DefaultSettings:
@@ -28,8 +28,7 @@ def check_if_settings_exist(file_path):
 
 def load_settings(file_path):
     with open(file_path, 'r', encoding='utf8') as f:
-        settings = json.load(f)
-    return settings
+        return json.load(f)
 
 def build_folder_structure():
     for element in APP_FOLDER_STRUCTURE:
