@@ -178,3 +178,74 @@ def format_card_values(element):
         else:
             result.append(f'{x}')
     return result
+
+def get_card_from_db(connection, card_id) -> dict:
+    sub_tables_names = [*DATABASE_SUBTABLES_NAMES_EXCEPTIONS, 'card_faces_image_uris', *DATABASE_SUBTABLES_NAMES_ARRAY, *DATABASE_SUBTABLES_NAMES_OBJECT]
+
+    query = f'''
+    SELECT * FROM main_table
+    WHERE id = '{card_id}'
+    '''
+
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    record = cursor.fetchall()
+
+    card = {key: record[0][key] for key in record[0].keys() if key != 'checksum'}
+
+    for subtable in sub_tables_names:
+            query = f'''
+            SELECT * FROM {subtable}_table
+            WHERE card_id = '{card_id}'
+            '''
+            cursor = connection.cursor()
+            cursor.execute(query)
+            record = cursor.fetchall()
+
+            if record:
+                if subtable in DATABASE_SUBTABLES_NAMES_ARRAY:
+                    card[subtable] = record[0]['array_value'].split(',')
+                elif subtable == 'card_faces_image_uris':
+                    for row in range(len(record)):
+                        card['card_faces'][row]['image_uris'] = {}
+                        for key in record[row].keys()[2:]:
+                            card['card_faces'][row]['image_uris'][key] = record[row][key]
+                else:
+                    if len(record) > 1:
+                        card[subtable] = []
+                        for row in range(len(record)):
+                            temp_object = {}
+                            for key in record[row].keys()[2:]:
+                                temp_object[key] = record[row][key]
+                            card[subtable].append(temp_object)
+                    else:
+                        card[subtable] = {}
+                        for key in record[0].keys()[2:]:
+                            card[subtable][key] = record[0][key]
+
+    return card
+
+def update_prices(connection, card):
+    query = f'''
+        DELETE FROM prices_table
+        WHERE card_id = '{card['id']}'
+        '''
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
+
+    query_sub_table_object(connection, card['id'], 'prices', card['prices'])
+
+def update_checksum_in_main(connection, id, new_checksum):
+    query = f'''
+    UPDATE main_table
+    SET checksum = {new_checksum}
+    WHERE id = '{id}'
+    '''
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()

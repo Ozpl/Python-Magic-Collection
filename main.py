@@ -8,17 +8,16 @@ from modules.deck import create_default_deck
 from modules.database.create import create_main_table, create_sub_tables
 from modules.database.alpha import alpha_load
 from modules.database.batch import batch_load
-from modules.database.functions import create_connection
+from modules.database.functions import create_connection, get_card_from_db
 
-def build_database():
+def build_database(connection):
     if not os.path.exists('./database/database.db'):
         with open('./database/database.db', 'w'): pass
-    connection = create_connection(DATABASE_DB_PATH)
     create_main_table(connection)
     create_sub_tables(connection)
-    alpha_load(connection)
-    #batch_load(connection)
-    connection.close()
+    #alpha_load(connection)
+    batch_load(connection)
+    #get_card_from_db(connection, '002ad179-ddf4-4f48-9504-cfa02e11a52e')
 
 build_folder_structure()
 check_if_settings_exist(SETTINGS_JSON_PATH)
@@ -26,8 +25,10 @@ check_if_settings_exist(SETTINGS_JSON_PATH)
 get_data_from_scryfall()
 create_default_collection()
 create_default_deck()
-build_database()
-#create_user_interface()
+connection = create_connection(DATABASE_DB_PATH)
+build_database(connection)
+#create_user_interface(connection)
+connection.close()
 
 #debug
 '''

@@ -1,7 +1,9 @@
 from PyQt5.QtCore import Qt, QRect, QPoint
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont
+from debugpy import connect
 from modules.consts import APP_NAME, APP_STYLE, APP_TAB_NAMES
+from modules.database.functions import get_card_from_db
 
 app = QApplication([])
 
@@ -27,7 +29,9 @@ page_controls_lyt = QVBoxLayout()
 preview_gbx = QGroupBox()
 preview_lyt = QHBoxLayout()
 
-def create_user_interface():
+def create_user_interface(db_connection):
+    global connection
+    connection = db_connection
     ui = UI()
     ui.showMaximized()
     app.exec()
@@ -146,6 +150,11 @@ def create_page_controls_group_box() -> QGroupBox:
     page_controls_gbx.setMaximumHeight(35+27)
 
     page_controls_label = QLabel('PageControlsGroupBox -> PageControlsLayout -> PageControlsLabel')
+
+    debug_button_fetch_card = QPushButton('Fetch card')
+    debug_button_fetch_card.clicked.connect(lambda: print(get_card_from_db(connection, '002ad179-ddf4-4f48-9504-cfa02e11a52e')))
+
+    page_controls_lyt.addWidget(debug_button_fetch_card)
     page_controls_lyt.addWidget(page_controls_label)
     page_controls_gbx.setLayout(page_controls_lyt)
     return page_controls_gbx
