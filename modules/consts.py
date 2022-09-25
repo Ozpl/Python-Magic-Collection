@@ -17,6 +17,7 @@ DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
     'card_faces'
 ]
 DATABASE_SUBTABLES_NAMES_ARRAY = [
+    'attraction_lights',
     'artist_ids',
     'color_identity',
     'color_indicator',
