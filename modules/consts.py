@@ -1,5 +1,5 @@
 SETTINGS_JSON_PATH = './settings.json'
-DATABASE_DB_PATH = './database/database.db'
+
 APP_NAME = 'Python Magic Collection'
 APP_STYLE = 'Fusion'
 APP_FOLDER_STRUCTURE = {
@@ -12,9 +12,21 @@ APP_FOLDER_STRUCTURE = {
     'symbols': 'images/symbols',
     'sets': 'images/sets'
 }
+APP_TAB_NAMES = [
+    'Collections',
+    'Decks',
+    'Add cards',
+    "Wishlist",
+    'Import/export',
+    'Settings'
+]
+
+DATABASE_DB_PATH = './database/database.db'
+#DATABASE_SUBTABLES are now demonstrative, they are being wiped and build again in create.py
 DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
     'all_parts',
-    'card_faces'
+    'card_faces',
+    'card_faces_image_uris'
 ]
 DATABASE_SUBTABLES_NAMES_ARRAY = [
     'attraction_lights',
@@ -37,10 +49,8 @@ DATABASE_SUBTABLES_NAMES_OBJECT = [
     'related_uris',
     'preview'
 ]
-APP_TAB_NAMES = [
-    'Collections',
-    'Decks',
-    'Add cards',
-    'Import/export',
-    'Settings'
+DATABASE_FREQUENT_UPDATING = [
+    'prices',
+    'edhrec_rank',
+    'penny_rank'
 ]

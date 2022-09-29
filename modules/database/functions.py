@@ -1,7 +1,7 @@
 import sqlite3
 from sqlite3 import Error
 import zlib
-from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
+from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT, DATABASE_FREQUENT_UPDATING
 
 def create_connection(db_path):
     connection = None
@@ -35,11 +35,17 @@ def add_card_to_db(connection, card):
             insert_to_sub_object[key] = card[key]
         else:
             insert_to_main[key] = card[key]
-    insert_to_main['checksum'] = checksum_of_a_record(card)
+            
+    frequent_updating = get_freqeunt_updating_dict(card)
+    insert_to_main['checksum_card'] = checksum_of_a_record(card)
+    insert_to_main['checksum_frequent_updating'] = checksum_of_a_record(frequent_updating)
 
     #main_table
     column_names = [*insert_to_main.keys()]
-    column_names[column_names.index('set')] = '"set"'
+    try:
+        column_names[column_names.index('set')] = '"set"'
+    except ValueError:
+        pass
     unpacked_dict = [*[insert_to_main[element] for element in insert_to_main.keys()]]
     
     placeholders = ', '.join('?' * len(column_names))
@@ -54,15 +60,15 @@ def add_card_to_db(connection, card):
     #sub_tables
     for key in insert_to_sub_exceptions.keys():
         if key == 'all_parts':
-            query_sub_table_all_parts(connection, card['id'], key, card[key])
+            query_sub_table_all_parts(connection, card['id'], key, insert_to_sub_exceptions[key])
         elif key == 'card_faces':
-            query_sub_table_card_faces(connection, card['id'], key, card[key])
+            query_sub_table_card_faces(connection, card['id'], key, insert_to_sub_exceptions[key])
 
     for key in insert_to_sub_array.keys():
-        query_sub_table_array(connection, card['id'], key, card[key])
+        query_sub_table_array(connection, card['id'], key, insert_to_sub_array[key])
 
     for key in insert_to_sub_object.keys():
-        query_sub_table_object(connection, card['id'], key, card[key])
+        query_sub_table_object(connection, card['id'], key, insert_to_sub_object[key])
 
 def query_sub_table_all_parts(connection, card_id, sub_table_name, value):
     column_names = query_get_table_columns(connection, sub_table_name)[1:]
@@ -80,7 +86,14 @@ def query_sub_table_all_parts(connection, card_id, sub_table_name, value):
 def query_sub_table_card_faces(connection, card_id, sub_table_name, value):
     for face in value:
         column_names = ['card_id', *face.keys()]
-        unpacked_dict = [card_id, *[face[element] for element in face.keys()]]
+        unpacked_dict = [card_id]
+        
+        for element in face.keys():
+            if 'color' not in element:
+                unpacked_dict.append(face[element])
+            else:
+                value = str(face[element])
+                unpacked_dict.append(value.replace("'", '').replace("[", '').replace("]", ''))
 
         #put image_uris from here to another subtable card_faces_image_uris
         for i, element in enumerate(column_names):
@@ -162,12 +175,12 @@ def query_get_table_columns(connection, table_name):
 
 def query_get_id_and_checksum(connection, table_name):
     query = f'''
-    SELECT id, checksum FROM {table_name}_table
+    SELECT id, checksum_card, checksum_frequent_updating FROM {table_name}_table
     '''
     cursor = connection.cursor()
     cursor.execute(query)
     record = cursor.fetchall()
-    record_dict = {element[0].replace("'", ""): element[1] for element in record}
+    record_dict = {element[0].replace("'", ""): {'checksum_card': element[1], 'checksum_frequent_updating': element[2]} for element in record}
     return record_dict
 
 def format_card_values(element):
@@ -227,25 +240,49 @@ def get_card_from_db(connection, card_id) -> dict:
 
     return card
 
-def update_prices(connection, card):
-    query = f'''
-        DELETE FROM prices_table
-        WHERE card_id = '{card['id']}'
-        '''
+def update_frequent_updating(connection, card, frequent_updating):
+    for key in frequent_updating:
+        if key == 'prices':
+            query = f'''
+                DELETE FROM {key}_table
+                WHERE card_id = '{card['id']}'
+                '''
 
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
+            cursor = connection.cursor()
+            cursor.execute(query)
+            connection.commit()
 
-    query_sub_table_object(connection, card['id'], 'prices', card['prices'])
+            query_sub_table_object(connection, card['id'], key, frequent_updating[key])
+        else:
+            query = f'''
+            UPDATE main_table
+            SET {key} = {frequent_updating[key]}
+            WHERE id = '{card['id']}'
+            '''
 
-def update_checksum_in_main(connection, id, new_checksum):
+            cursor = connection.cursor()
+            cursor.execute(query)
+            connection.commit()
+
+def update_checksum_in_main(connection, id, which_checksum, checksum_value):
     query = f'''
     UPDATE main_table
-    SET checksum = {new_checksum}
+    SET {which_checksum} = {checksum_value}
     WHERE id = '{id}'
     '''
 
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
+
+def get_freqeunt_updating_dict(card):
+    frequent_updating = {}
+    for key in card:
+        if key in DATABASE_FREQUENT_UPDATING:
+            frequent_updating[key] = card[key]
+    for key in DATABASE_FREQUENT_UPDATING:
+        try:
+            del card[key]
+        except KeyError:
+            pass
+    return frequent_updating

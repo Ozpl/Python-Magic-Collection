@@ -135,9 +135,9 @@ def create_grid_group_box() -> QGroupBox:
     grid_gbx = QGroupBox()
     grid_lyt = QHBoxLayout()
 
-    for i in range(5):
+    for element in ['_small.jpg', '_normal.jpg', '_large.jpg', '.png']:
         image_lbl = QLabel()
-        image = QPixmap(f'images/muldrotha.png')
+        image = QPixmap(f'images/muldrotha{element}')
         image_lbl.setPixmap(image)
         image_lbl.setScaledContents(True)
         image_lbl.setMaximumSize(210,int(210*1.39))

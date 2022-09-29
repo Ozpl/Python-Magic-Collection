@@ -13,8 +13,8 @@ from modules.database.functions import create_connection, get_card_from_db
 def build_database(connection):
     if not os.path.exists('./database/database.db'):
         with open('./database/database.db', 'w'): pass
-    create_main_table(connection)
-    create_sub_tables(connection)
+    #create_main_table(connection)
+    #create_sub_tables(connection)
     #alpha_load(connection)
     batch_load(connection)
     #get_card_from_db(connection, '002ad179-ddf4-4f48-9504-cfa02e11a52e')

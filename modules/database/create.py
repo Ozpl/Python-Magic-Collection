@@ -1,77 +1,125 @@
 import sqlite3
+import json
+import re
 from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
 
+def assign_data_type(element):
+    data_type = ''
+
+    if isinstance(element, list):
+        data_type = 'list'
+    elif isinstance(element, bool):
+        data_type = 'bool'
+    elif isinstance(element, float):
+        data_type = 'float'
+    elif isinstance(element, str):
+        data_type = 'string'
+    elif isinstance(element, int):
+        data_type = 'int'
+    elif isinstance(element, object):
+        data_type = 'object'
+
+    #Exception for null in value
+    if element is None:
+        data_type = 'string'
+
+    #Exception for datetime values
+    if isinstance(element, str):
+        r = re.compile('\d\d\d\d-\d\d-\d\d')
+        if r.match(element) is not None:
+            data_type = 'datetime'
+
+    return data_type
+
+def get_column_names_and_types(case):
+    with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
+        j = json.load(f)
+        names_and_types = {}
+        for card in j:
+            try:
+                if case == 'main':
+                    for key in card.keys():
+                        if key not in names_and_types:
+                            names_and_types[key] = assign_data_type(card[key])
+                            if key == 'set':
+                                names_and_types['"set"'] = names_and_types.pop('set')
+
+                elif case == 'all_parts' or case == 'card_faces':
+                    for element in card[case]:
+                        for key in element.keys():
+                            if key not in names_and_types:
+                                names_and_types[key] = assign_data_type(element[key])
+                                
+                elif case == 'card_faces_image_uris':
+                    for face in card['card_faces']:
+                        for key in face['image_uris'].keys():
+                            if key not in names_and_types:
+                                names_and_types[key] = assign_data_type(key)
+                                
+                else:
+                    for key in card[case].keys():
+                        if key not in names_and_types:
+                            names_and_types[key] = assign_data_type(card[case][key])
+            except KeyError:
+                pass
+        return names_and_types
+
+def parse_subtable_query(subtable, column_names_and_types):
+    query = ''
+
+    query = f'CREATE TABLE IF NOT EXISTS {subtable}_table (\ndb_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\ncard_id VARCHAR(255) NOT NULL,'
+    for element in column_names_and_types:
+        match column_names_and_types[element]:
+            case 'string' | 'list':
+                query += f'\n{element} VARCHAR(255),'
+            case 'float':
+                query += f'\n{element} FLOAT,'
+            case 'bool':
+                query += f'\n{element} BOOL,'
+            case 'int':
+                query += f'\n{element} INT,'
+            case 'datetime':
+                query += f'\n{element} DATETIME,'
+    query = query[:-1] + '\n)'
+
+    return query
+
 def create_main_table(connection):
-    query = '''
-    CREATE TABLE IF NOT EXISTS main_table (
-        id VARCHAR(255) NOT NULL PRIMARY KEY,
-        arena_id INT,
-        lang VARCHAR(255),
-        mtgo_id INT,
-        mtgo_foil_id INT,
-        tcgplayer_id INT,
-        tcgplayer_etched_id INT,
-        cardmarket_id INT,
-        object VARCHAR(255),
-        oracle_id VARCHAR(255),
-        prints_search_uri VARCHAR(255),
-        rulings_uri VARCHAR(255),
-        scryfall_uri VARCHAR(255),
-        uri VARCHAR(255),
-        cmc INT,
-        edhrec_rank INT,
-        hand_modifier VARCHAR(255),
-        layout VARCHAR(255),
-        life_modifier VARCHAR(255),
-        loyalty VARCHAR(255),
-        mana_cost VARCHAR(255),
-        name VARCHAR(255),
-        oracle_text VARCHAR(255),
-        oversized VARCHAR(255),
-        penny_rank INT,
-        power VARCHAR(255),
-        reserved VARCHAR(255),
-        foil VARCHAR(255),
-        nonfoil VARCHAR(255),
-        toughness VARCHAR(255),
-        type_line VARCHAR(255),
-        artist VARCHAR(255),
-        booster VARCHAR(255),
-        border_color VARCHAR(255),
-        card_back_id VARCHAR(255),
-        collector_number VARCHAR(255),
-        content_warning VARCHAR(255),
-        digital VARCHAR(255),
-        flavor_name VARCHAR(255),
-        flavor_text VARCHAR(255),
-        frame VARCHAR(255),
-        full_art VARCHAR(255),
-        highres_image VARCHAR(255),
-        illustration_id VARCHAR(255),
-        image_status VARCHAR(255),
-        printed_name VARCHAR(255),
-        printed_text VARCHAR(255),
-        printed_type_line VARCHAR(255),
-        promo VARCHAR(255),
-        rarity VARCHAR(255),
-        released_at DATETIME,
-        reprint VARCHAR(255),
-        scryfall_set_uri VARCHAR(255),
-        set_name VARCHAR(255),
-        set_search_uri VARCHAR(255),
-        set_type VARCHAR(255),
-        set_uri VARCHAR(255),
-        "set" VARCHAR(255),
-        set_id VARCHAR(255),
-        story_spotlight VARCHAR(255),
-        textless VARCHAR(255),
-        variation VARCHAR(255),
-        variation_of VARCHAR(255),
-        security_stamp VARCHAR(255),
-        watermark VARCHAR(255),
-        checksum BIGINT
-    )
-    '''
+    main_column_names_and_types = get_column_names_and_types('main')
+    DATABASE_SUBTABLES_NAMES_EXCEPTIONS = []
+    DATABASE_SUBTABLES_NAMES_ARRAY = []
+    DATABASE_SUBTABLES_NAMES_OBJECT = []
+
+    query = 'CREATE TABLE IF NOT EXISTS main_table (\nid VARCHAR(255) NOT NULL PRIMARY KEY,'
+    for element in main_column_names_and_types:
+        if element == 'id':
+            continue
+        elif element == 'all_parts':
+            DATABASE_SUBTABLES_NAMES_EXCEPTIONS.append(element)
+            continue
+        elif element == 'card_faces':
+            DATABASE_SUBTABLES_NAMES_EXCEPTIONS.append(element)
+            DATABASE_SUBTABLES_NAMES_EXCEPTIONS.append('card_faces_image_uris')
+            continue
+
+        match main_column_names_and_types[element]:
+            case 'string':
+                query += f'\n{element} VARCHAR(255),'
+            case 'float':
+                query += f'\n{element} FLOAT,'
+            case 'bool':
+                query += f'\n{element} BOOL,'
+            case 'int':
+                query += f'\n{element} INT,'
+            case 'datetime':
+                query += f'\n{element} DATETIME,'
+            case 'list':
+                DATABASE_SUBTABLES_NAMES_ARRAY.append(element)
+            case 'object':
+                DATABASE_SUBTABLES_NAMES_OBJECT.append(element)
+
+    query += '\nchecksum_card BIGINT,\nchecksum_frequent_updating BIGINT\n)'
+
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
@@ -86,76 +134,34 @@ def create_sub_tables(connection):
 
 def create_subt_exceptions(connection, subtable):
     if subtable == 'all_parts':
-        columns = ['object', 'id', 'component', 'name', 'type_line', 'uri']
-        query = f'''
-        CREATE TABLE IF NOT EXISTS {subtable}_table (
-            db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            card_id VARCHAR(255) NOT NULL,
-            {', '.join([f'{element} VARCHAR(255)' for element in columns])}
-        )
-        '''
+        column_names_and_types = get_column_names_and_types('all_parts')
 
     elif subtable == 'card_faces':
-        columns = ['object', 'name', 'mana_cost', 'type_line', 'oracle_text', 'colors', 'artist', 'artist_id', 'illustration_id', 'image_uris', 'flavor_name', 'watermark', 'power', 'toughness', 'color_indicator', 'loyalty', 'flavor_text', 'oracle_id', 'layout', 'cmc', 'printed_name', 'printed_type_line', 'printed_text']
-        query = f'''
-        CREATE TABLE IF NOT EXISTS {subtable}_table (
-            db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-            card_id VARCHAR(255) NOT NULL,
-            {', '.join([f'{element} VARCHAR(255)' for element in columns])}
-        )
-        '''
+        column_names_and_types = get_column_names_and_types('card_faces')
+        column_names_and_types.pop('image_uris')
+        
+    elif subtable == 'card_faces_image_uris':
+        column_names_and_types = get_column_names_and_types('card_faces_image_uris')
     
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
+    query = parse_subtable_query(subtable, column_names_and_types)
 
-    #image_uris in card_face subtable
-    columns = ['small', 'normal', 'large', 'png', 'art_crop', 'border_crop']
-    query = f'''
-    CREATE TABLE IF NOT EXISTS card_faces_image_uris_table (
-        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        card_id VARCHAR(255) NOT NULL,
-        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
-    )
-    '''
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
 
 def create_subt_array(connection, subtable):
-    query = f'''
-    CREATE TABLE IF NOT EXISTS {subtable}_table (
-        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        card_id VARCHAR(255) NOT NULL,
-        array_value VARCHAR(255) NOT NULL
-    )
-    '''
+    column_names_and_types = {'array_value': 'string'}
+    
+    query = parse_subtable_query(subtable, column_names_and_types)
     
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
 
 def create_subt_object(connection, subtable):
-    columns = []
-    match subtable:
-        case 'image_uris':
-            columns = ['small', 'normal', 'large', 'png', 'art_crop', 'border_crop']
-        case 'legalities':
-            columns = ['standard', 'future', 'historic', 'gladiator', 'pioneer', 'explorer', 'modern', 'legacy', 'pauper', 'vintage', 'penny', 'commander', 'brawl', 'historicbrawl', 'alchemy', 'paupercommander', 'duel', 'oldschool', 'premodern']
-        case 'prices':
-            columns = ['usd', 'usd_foil', 'usd_etched', 'eur', 'eur_foil', 'tix']
-        case 'related_uris':
-            columns = ['gatherer', 'tcgplayer_infinite_articles', 'tcgplayer_infinite_decks', 'edhrec']
-        case 'preview':
-            columns = ['source', 'source_uri', 'previewed_at']
+    column_names_and_types = get_column_names_and_types(subtable)
 
-    query = f'''
-    CREATE TABLE IF NOT EXISTS {subtable}_table (
-        db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        card_id VARCHAR(255) NOT NULL,
-        {', '.join([f'{element} VARCHAR(255)' for element in columns])}
-    )
-    '''
+    query = parse_subtable_query(subtable, column_names_and_types)
 
     cursor = connection.cursor()
     cursor.execute(query)
