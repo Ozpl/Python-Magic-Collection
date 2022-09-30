@@ -1,7 +1,7 @@
 import json
 from modules.database.functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, add_card_to_db, update_frequent_updating, update_checksum_in_main, get_freqeunt_updating_dict
-from modules.consts import DATABASE_FREQUENT_UPDATING
-from datetime import datetime
+from modules.logging import log
+from tqdm import tqdm
 
 def batch_load(connection):
     with open('./downloads/Default Cards.json', 'r', encoding='utf8') as f:
@@ -11,10 +11,10 @@ def batch_load(connection):
         count_updated_card = 0
         count_up_to_date = 0
 
-        print(f'Batch load started - {datetime.now()}')
+        log('info', 'Batch load started')
         database_checksum = query_get_id_and_checksum(connection, 'main')
 
-        for card in data:
+        for card in tqdm(data):
             #add card if not in db
             if card['id'] not in database_checksum:
                 add_card_to_db(connection, card)
@@ -41,9 +41,8 @@ def batch_load(connection):
             else:
                 count_up_to_date = count_up_to_date + 1
                 
-        print(f'''Batch load done - {datetime.now()}
-        Cards added: {count_new}
-        Cards with updated prices and ranks: {count_updated_frequent_updating}
-        Cards that changed: {count_updated_card}
-        Cards without updates: {count_up_to_date}
-        ''')
+        log('info', f'''Batch load done
+        -Cards added: {count_new}
+        -Cards with updated prices and ranks: {count_updated_frequent_updating}
+        -Cards that changed: {count_updated_card}
+        -Cards without updates: {count_up_to_date}''')

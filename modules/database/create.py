@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import re
+from modules.logging import log
 from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT
 
 def assign_data_type(element):
@@ -90,6 +91,8 @@ def create_main_table(connection):
     DATABASE_SUBTABLES_NAMES_ARRAY = []
     DATABASE_SUBTABLES_NAMES_OBJECT = []
 
+    log('info', 'Creating main_table')
+
     query = 'CREATE TABLE IF NOT EXISTS main_table (\nid VARCHAR(255) NOT NULL PRIMARY KEY,'
     for element in main_column_names_and_types:
         if element == 'id':
@@ -125,6 +128,7 @@ def create_main_table(connection):
     connection.commit()
 
 def create_sub_tables(connection):
+    log('info', 'Creating subtables')
     for element in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
         create_subt_exceptions(connection, element)
     for element in DATABASE_SUBTABLES_NAMES_ARRAY:

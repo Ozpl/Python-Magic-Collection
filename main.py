@@ -1,6 +1,8 @@
-import json, os
-from modules.consts import SETTINGS_JSON_PATH, DATABASE_DB_PATH
-from modules.settings import check_if_settings_exist, build_folder_structure, load_settings
+import os
+from datetime import datetime, timedelta
+import configparser
+from modules.consts import SETTINGS_FILE_STRUCTURE
+from modules.config import Config
 from modules.ui import create_user_interface
 from modules.api import get_data_from_scryfall
 from modules.collection import create_default_collection
@@ -8,40 +10,44 @@ from modules.deck import create_default_deck
 from modules.database.create import create_main_table, create_sub_tables
 from modules.database.alpha import alpha_load
 from modules.database.batch import batch_load
-from modules.database.functions import create_connection, get_card_from_db
+from modules.database.functions import create_connection
+from modules.logging import log
 
-def build_database(connection):
-    if not os.path.exists('./database/database.db'):
-        with open('./database/database.db', 'w'): pass
-    #create_main_table(connection)
-    #create_sub_tables(connection)
-    #alpha_load(connection)
-    batch_load(connection)
-    #get_card_from_db(connection, '002ad179-ddf4-4f48-9504-cfa02e11a52e')
+#Initiate configuration
+if not os.path.exists(SETTINGS_FILE_STRUCTURE['config']):
+    config = Config()
+    config.create_default_config_file()
+else:
+    config = Config()
+    config.load()
 
-build_folder_structure()
-check_if_settings_exist(SETTINGS_JSON_PATH)
-#settings = load_settings() #unnecessary for now
+#Download new bulk_data if needed
 get_data_from_scryfall()
-create_default_collection()
-create_default_deck()
-connection = create_connection(DATABASE_DB_PATH)
-build_database(connection)
-#create_user_interface(connection)
-connection.close()
 
-#debug
-'''
-with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
-    j = json.load(f)
-    keys = []
-    for i, element in enumerate(j):
-        try:
-            #if element['name'] == 'Arlinn Kord // Arlinn, Embraced by the Moon':
-            for key in element.keys():
-                if key not in keys:
-                    keys.append(key)
-        except Exception:
-            pass
-    print(keys)
-'''
+#Refresh configuration
+config.load()
+
+#Manage cards database
+database_connection = create_connection(SETTINGS_FILE_STRUCTURE['database'])
+if config.get_boolean('FLAG', 'database_was_created'):
+    create_main_table(database_connection)
+    create_sub_tables(database_connection)
+    alpha_load(database_connection)
+if config.get_boolean('FLAG', 'downloaded_from_scryfall'):
+    batch_load(database_connection)
+
+#Manage collections database
+collections_connection = create_connection(SETTINGS_FILE_STRUCTURE['collections'])
+#create_default_collection()
+
+#Manage decks database
+decks_connection = create_connection(SETTINGS_FILE_STRUCTURE['decks'])
+#create_default_deck()
+
+#Build UI
+create_user_interface(database_connection, collections_connection, decks_connection)
+
+#Close all .db connections
+database_connection.close()
+collections_connection.close()
+decks_connection.close()

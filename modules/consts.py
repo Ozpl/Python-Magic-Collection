@@ -1,8 +1,5 @@
-SETTINGS_JSON_PATH = './settings.json'
-
-APP_NAME = 'Python Magic Collection'
-APP_STYLE = 'Fusion'
-APP_FOLDER_STRUCTURE = {
+#SETTINGS
+SETTINGS_FOLDER_STRUCTURE = {
     'collections': 'collections',
     'database': 'database',
     'decks': 'decks',
@@ -12,16 +9,30 @@ APP_FOLDER_STRUCTURE = {
     'symbols': 'images/symbols',
     'sets': 'images/sets'
 }
-APP_TAB_NAMES = [
-    'Collections',
-    'Decks',
-    'Add cards',
-    "Wishlist",
-    'Import/export',
-    'Settings'
-]
+SETTINGS_FILE_STRUCTURE = {
+    'config': 'config.ini',
+    'database': f"./{SETTINGS_FOLDER_STRUCTURE['database']}/database.db",
+    'collections': f"./{SETTINGS_FOLDER_STRUCTURE['database']}/collections.db",
+    'decks': f"./{SETTINGS_FOLDER_STRUCTURE['database']}/decks.db"
+}
+SETTINGS_WHOLE_COLLECTION_NAME = 'Whole database'
+SETTINGS_ADD_NEW_COLLECTION_NAME = 'Add new collection...'
 
-DATABASE_DB_PATH = './database/database.db'
+#APP
+APP_NAME = 'Python Magic Collection'
+APP_STYLE = 'Fusion'
+APP_FONT_NAME = 'MS Shell Dlg 2'
+APP_FONT_SIZE = 10
+APP_TAB_NAMES = {
+    'collection': 'Collection',
+    'decks': 'Decks',
+    'add_cards': 'Add cards',
+    'wishlist': "Wishlist",
+    'import_export': 'Import/export',
+    'settings': 'Settings'
+}
+
+#DATABASE
 #DATABASE_SUBTABLES are now demonstrative, they are being wiped and build again in create.py
 DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
     'all_parts',
