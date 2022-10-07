@@ -2,7 +2,7 @@ import json
 import requests
 from os import path
 from datetime import datetime
-from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
+from modules.consts import SETTINGS_FOLDER_STRUCTURE
 from modules.config import Config
 from modules.logging import console_log
 
@@ -40,6 +40,6 @@ def get_data_from_scryfall():
         download_bulk_json_file(bulk_uri, bulk_data_type)
 
 def restore_old_json_and_update_db_from_it():
+#TODO
+#Save old copy as backup and fall back to it if you get db error
     pass
-    #TODO
-    #Save old copy as backup and fall back to it if you get db error

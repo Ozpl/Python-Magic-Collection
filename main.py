@@ -6,7 +6,7 @@ from modules.api import get_data_from_scryfall
 from modules.database.create import create_main_table, create_sub_tables
 from modules.database.alpha import alpha_load
 from modules.database.batch import batch_load
-from modules.database.functions import create_connection
+from modules.database.database_functions import create_connection
 from modules.database.collections import create_collections_main_table, create_collection, get_all_collections_names_as_array
 
 #Initiate configuration

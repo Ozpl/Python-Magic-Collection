@@ -196,9 +196,9 @@ def get_card_from_db(connection, card_id) -> dict:
     sub_tables_names = [*DATABASE_SUBTABLES_NAMES_EXCEPTIONS, 'card_faces_image_uris', *DATABASE_SUBTABLES_NAMES_ARRAY, *DATABASE_SUBTABLES_NAMES_OBJECT]
 
     query = f'''
-    SELECT * FROM main_table
-    WHERE id = '{card_id}'
-    '''
+        SELECT * FROM main_table
+        WHERE id = '{card_id}'
+        '''
 
     connection.row_factory = sqlite3.Row
 
@@ -206,7 +206,7 @@ def get_card_from_db(connection, card_id) -> dict:
     cursor.execute(query)
     record = cursor.fetchall()
 
-    card = {key: record[0][key] for key in record[0].keys() if key != 'checksum'}
+    card = {key: record[0][key] for key in record[0].keys() if 'checksum' not in key}
 
     for subtable in sub_tables_names:
             query = f'''
@@ -237,6 +237,22 @@ def get_card_from_db(connection, card_id) -> dict:
                         card[subtable] = {}
                         for key in record[0].keys()[2:]:
                             card[subtable][key] = record[0][key]
+
+    return card
+
+def get_card_from_db_to_add_cards(connection, card_id) -> dict:
+    query = f'''
+        SELECT * FROM main_table
+        WHERE id = '{card_id}'
+        '''
+
+    connection.row_factory = sqlite3.Row
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    record = cursor.fetchall()
+
+    card = {key: record[0][key] for key in record[0].keys() if 'checksum' not in key}
 
     return card
 
@@ -286,3 +302,12 @@ def get_freqeunt_updating_dict(card):
         except KeyError:
             pass
     return frequent_updating
+
+def find_cards_in_db(connection, query):
+    cursor = connection.cursor()
+    cursor.execute(query)
+    record = cursor.fetchall()
+
+    card_ids = [element[0] for element in record]
+
+    return card_ids

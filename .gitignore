@@ -3,6 +3,8 @@
 *.bak
 images/*.jpg
 images/*.png
+images/cards/*.jpg
+images/cards/*.png
 downloads/*.json
 database/database.db
 

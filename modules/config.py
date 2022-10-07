@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE, SETTINGS_WHOLE_COLLECTION_NAME
+from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 import configparser
 
 class Config:
@@ -19,7 +19,11 @@ class Config:
             'last_updated': str((datetime.now() - timedelta(8)).strftime(self.config_parser['TIME']['format_full']))
         }
         self.config_parser['COLLECTION'] = {
-            'current': SETTINGS_WHOLE_COLLECTION_NAME
+            'image_type': 'normal',
+            'grid_number_of_cards': '18',
+            'grid_number_of_rows': '3',
+            'current_page': '1',
+            'current_collection': 'maincollection'
         }
         self.config_parser['FLAG'] = {
             'downloaded_from_scryfall': 'false',

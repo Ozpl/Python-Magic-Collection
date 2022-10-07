@@ -121,6 +121,8 @@ def create_main_table(connection):
             case 'object':
                 DATABASE_SUBTABLES_NAMES_OBJECT.append(element)
 
+    #TODO
+    #Add new column named sort_key and fill with "card['cmc']card['name'].lower()""
     query += '\nchecksum_card BIGINT,\nchecksum_frequent_updating BIGINT\n)'
 
     cursor = connection.cursor()

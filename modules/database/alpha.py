@@ -1,5 +1,5 @@
 import json
-from modules.database.functions import add_card_to_db
+from modules.database.database_functions import add_card_to_db
 from modules.logging import console_log
 from tqdm import tqdm
 

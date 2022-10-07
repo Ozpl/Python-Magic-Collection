@@ -15,8 +15,6 @@ SETTINGS_FILE_STRUCTURE = {
     'collections': f"./{SETTINGS_FOLDER_STRUCTURE['database']}/collections.db",
     'decks': f"./{SETTINGS_FOLDER_STRUCTURE['database']}/decks.db"
 }
-SETTINGS_WHOLE_COLLECTION_NAME = 'Whole database'
-SETTINGS_ADD_NEW_COLLECTION_NAME = 'Add new collection...'
 
 #APP
 APP_NAME = 'Python Magic Collection'
