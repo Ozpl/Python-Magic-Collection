@@ -4,7 +4,7 @@ from os import path
 from datetime import datetime
 from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 from modules.config import Config
-from modules.logging import log
+from modules.logging import console_log
 
 def get_bulk_data_response(url):
     request = requests.get(url)
@@ -12,11 +12,11 @@ def get_bulk_data_response(url):
     return response['data']
 
 def download_bulk_json_file(url, file_name):
-    log('info', 'Downloading new bulk_data')
+    console_log('info', 'Downloading new bulk_data')
     response = requests.get(url)
     with open(f'./{SETTINGS_FOLDER_STRUCTURE["downloads"]}/{file_name}.json', 'w', encoding='utf8') as f:
         json.dump(response.json(), f, ensure_ascii=False, indent=4)
-    log('info', 'bulk_data was downloaded successfully')
+    console_log('info', 'bulk_data was downloaded successfully')
 
 def get_data_from_scryfall():
     config = Config()

@@ -1,6 +1,6 @@
 import logging
 
-def log(type, message):
+def console_log(type, message):
     level = logging.DEBUG
     format = '[%(levelname)s] %(asctime)s - %(message)s'
     logging.basicConfig(level=level, format=format)

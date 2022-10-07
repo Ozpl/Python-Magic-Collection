@@ -1,24 +1,25 @@
 import json
 from modules.database.functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, add_card_to_db, update_frequent_updating, update_checksum_in_main, get_freqeunt_updating_dict
-from modules.logging import log
+from modules.logging import console_log
 from tqdm import tqdm
 
 def batch_load(connection):
     with open('./downloads/Default Cards.json', 'r', encoding='utf8') as f:
         data = json.load(f)
-        count_new = 0
-        count_updated_frequent_updating = 0
-        count_updated_card = 0
-        count_up_to_date = 0
+        count = {
+            'new': 0,
+            'frequent': 0,
+            'card': 0
+        }
 
-        log('info', 'Batch load started')
+        console_log('info', 'Batch load started')
         database_checksum = query_get_id_and_checksum(connection, 'main')
 
         for card in tqdm(data):
             #add card if not in db
             if card['id'] not in database_checksum:
                 add_card_to_db(connection, card)
-                count_new = count_new + 1
+                count['new'] = count['new'] + 1
                 continue
 
             current_frequent_updating = get_freqeunt_updating_dict(card)
@@ -31,18 +32,15 @@ def batch_load(connection):
                 add_card_to_db(connection, card)
                 update_frequent_updating(connection, card, current_frequent_updating)
                 update_checksum_in_main(connection, card['id'], 'checksum_frequent_updating', current_frequent_updating_checksum)
-                count_updated_card = count_updated_card + 1
+                count['card'] = count['card'] + 1
             #check most freqeunt changes
             elif database_checksum[card['id']]['checksum_frequent_updating'] != current_frequent_updating_checksum:
                 update_frequent_updating(connection, card, current_frequent_updating)
                 update_checksum_in_main(connection, card['id'], 'checksum_frequent_updating', current_frequent_updating_checksum)
-                count_updated_frequent_updating = count_updated_frequent_updating + 1
-            #no changes
-            else:
-                count_up_to_date = count_up_to_date + 1
+                count['frequent'] = count['frequent'] + 1
                 
-        log('info', f'''Batch load done
-        -Cards added: {count_new}
-        -Cards with updated prices and ranks: {count_updated_frequent_updating}
-        -Cards that changed: {count_updated_card}
-        -Cards without updates: {count_up_to_date}''')
+        console_log('info', f'''Batch load done
+        -Cards added: {count['new']}
+        -Cards with updated prices and ranks: {count['frequent']}
+        -Cards that changed: {count['card']}
+        -Cards without updates: {len(data) - count['new'] - count['frequent'] - count['card']}''')

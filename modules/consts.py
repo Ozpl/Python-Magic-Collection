@@ -22,7 +22,7 @@ SETTINGS_ADD_NEW_COLLECTION_NAME = 'Add new collection...'
 APP_NAME = 'Python Magic Collection'
 APP_STYLE = 'Fusion'
 APP_FONT_NAME = 'MS Shell Dlg 2'
-APP_FONT_SIZE = 10
+APP_FONT_SIZE = 13
 APP_TAB_NAMES = {
     'collection': 'Collection',
     'decks': 'Decks',
