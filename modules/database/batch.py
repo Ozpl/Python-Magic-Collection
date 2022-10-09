@@ -1,5 +1,5 @@
 import json
-from modules.database.database_functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, add_card_to_db, update_frequent_updating, update_checksum_in_main, get_freqeunt_updating_dict
+from modules.database.database_functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, add_card_to_db, update_frequent_updating, update_checksum_in_main, get_frequent_updating_dict
 from modules.logging import console_log
 from tqdm import tqdm
 
@@ -22,7 +22,7 @@ def database_batch_load(connection):
                 count['new'] = count['new'] + 1
                 continue
 
-            current_frequent_updating = get_freqeunt_updating_dict(card)
+            current_frequent_updating = get_frequent_updating_dict(card)
             current_frequent_updating_checksum = checksum_of_a_record(current_frequent_updating)
             current_card_checksum = checksum_of_a_record(card)
 

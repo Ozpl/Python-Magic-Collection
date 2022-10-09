@@ -37,7 +37,7 @@ def add_card_to_db(connection: sqlite3.Connection, card):
         else:
             insert_to_main[key] = card[key]
             
-    frequent_updating = get_freqeunt_updating_dict(card)
+    frequent_updating = get_frequent_updating_dict(card)
     insert_to_main['checksum_card'] = checksum_of_a_record(card)
     insert_to_main['checksum_frequent_updating'] = checksum_of_a_record(frequent_updating)
 
@@ -292,7 +292,7 @@ def update_checksum_in_main(connection, id, which_checksum, checksum_value):
     cursor.execute(query)
     connection.commit()
 
-def get_freqeunt_updating_dict(card):
+def get_frequent_updating_dict(card):
     frequent_updating = {}
     for key in card:
         if key in DATABASE_FREQUENT_UPDATING:
