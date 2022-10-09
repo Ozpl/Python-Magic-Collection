@@ -1,17 +1,18 @@
 import sqlite3
-from sqlite3 import Error
 import zlib
 from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT, DATABASE_FREQUENT_UPDATING
 
-def create_connection(db_path):
+def create_connection(db_path: str) -> sqlite3.Connection:
+    '''Create connection to .db file via sqlite3 function from given path.'''
     connection = None
     try:
         connection = sqlite3.connect(db_path)
         return connection
-    except Error as e:
+    except sqlite3.Error as e:
         print(e)
 
-def checksum_of_a_record(card):
+def checksum_of_a_record(card: dict) -> int:
+    '''Given certain dict, return its unique checksum value.'''
     checksum = 0
     for item in card.items():
         c1 = 1
@@ -20,7 +21,7 @@ def checksum_of_a_record(card):
         checksum = checksum ^ c1
     return checksum
 
-def add_card_to_db(connection, card):
+def add_card_to_db(connection: sqlite3.Connection, card):
     insert_to_main = {}
     insert_to_sub_exceptions = {}
     insert_to_sub_array = {}

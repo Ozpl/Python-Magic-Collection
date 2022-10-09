@@ -3,7 +3,7 @@ import shutil
 from PyQt5.QtCore import Qt, QRect, QPoint
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont, QResizeEvent, QImage
-from modules.consts import APP_NAME, APP_STYLE, APP_TAB_NAMES, APP_FONT_NAME, APP_FONT_SIZE, SETTINGS_FOLDER_STRUCTURE
+from modules.consts import APP_NAME, APP_STYLE, APP_TAB_NAMES, APP_FONT_NAME, APP_FONT_SIZE, SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 from modules.config import Config
 from modules.database.database_functions import get_card_from_db, find_cards_in_db, get_card_from_db_to_add_cards
 from modules.database.query import construct_query
@@ -12,8 +12,10 @@ from modules.logging import console_log
 import os
 
 config = Config()
-if config.get_value('COLLECTION', 'image_type') == 'png': image_extension = 'png'
-else: image_extension = 'jpg'
+#you need this if if .ini file is not created yet
+if os.path.exists(SETTINGS_FILE_STRUCTURE['config']):
+    if config.get_value('COLLECTION', 'image_type') == 'png': image_extension = 'png'
+    else: image_extension = 'jpg'
 
 app = QApplication([])
 app_layout = QVBoxLayout()

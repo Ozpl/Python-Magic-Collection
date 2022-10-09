@@ -4,8 +4,10 @@ from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 import configparser
 
 class Config:
+    '''Class which stores all settable variables as strings in .ini file using ConfigParser library. Use 'set_value' and 'get_x', where x can be 'bool', 'int', 'float' or 'value'.'''
     def __init__(self):
         self.config_parser = configparser.ConfigParser()
+        self.load()
 
     def create_default_config_file(self):
         self.config_parser['DEFAULT'] = {}
@@ -39,32 +41,32 @@ class Config:
     def load(self):
         self.config_parser.read(f'{SETTINGS_FILE_STRUCTURE["config"]}')
 
-    def get_boolean(self, section, option):
+    def get_boolean(self, section: str, option:str) -> bool:
         self.load()
         return self.config_parser.getboolean(section.upper(), option.lower())
 
-    def get_int(self, section, option):
+    def get_int(self, section: str, option: str) -> int:
         self.load()
         return self.config_parser.getint(section.upper(), option.lower())
         
-    def get_float(self, section, option):
+    def get_float(self, section: str, option: str) -> float:
         self.load()
         return self.config_parser.getfloat(section.upper(), option.lower())
 
-    def get_value(self, section, option):
+    def get_value(self, section: str, option: str) -> str:
         self.load()
         return self.config_parser[section.upper()][option.lower().lower()]
 
-    def set_value(self, section, option, value):
+    def set_value(self, section: str, option: str, value: str) -> None:
         self.config_parser[section.upper()][option.lower()] = value
         self.save()
 
-    def build_folder_structure(self):
+    def build_folder_structure(self) -> None:
         for folder in SETTINGS_FOLDER_STRUCTURE:
             if not os.path.exists(f'./{SETTINGS_FOLDER_STRUCTURE[folder]}'):
                 os.mkdir(f'./{SETTINGS_FOLDER_STRUCTURE[folder]}')
     
-    def build_file_structure(self):
+    def build_file_structure(self) -> None:
          for file in SETTINGS_FILE_STRUCTURE:
             if file != 'config':
                 if not os.path.exists(SETTINGS_FILE_STRUCTURE[file]):

@@ -20,7 +20,6 @@ def download_bulk_json_file(url, file_name):
 
 def get_data_from_scryfall():
     config = Config()
-    config.load()
     
     bulk_response = get_bulk_data_response(config.get_value('BULK', 'url'))
     bulk_data_type = config.get_value('BULK', 'data_type')
@@ -28,7 +27,7 @@ def get_data_from_scryfall():
 
     time_difference = (datetime.now() - datetime.strptime(config.get_value('BULK', 'last_updated'), config.get_value('TIME', 'format_full'))).total_seconds()
 
-    if time_difference > float(config.get_value('BULK', 'time_period')):
+    if time_difference > config.get_float('BULK', 'time_period'):
         config.set_value('FLAG', 'downloaded_from_scryfall', 'true')
         download_bulk_json_file(bulk_uri, bulk_data_type)
         config.set_value('BULK', 'last_updated', str(datetime.now().strftime(config.get_value('TIME', 'format_full'))))
@@ -40,6 +39,6 @@ def get_data_from_scryfall():
         download_bulk_json_file(bulk_uri, bulk_data_type)
 
 def restore_old_json_and_update_db_from_it():
-#TODO
-#Save old copy as backup and fall back to it if you get db error
+    #TODO
+    #Save old copy as backup and fall back to it if you get db error
     pass

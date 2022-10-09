@@ -85,7 +85,7 @@ def parse_subtable_query(subtable, column_names_and_types):
 
     return query
 
-def create_main_table(connection):
+def create_database_main_table(connection):
     main_column_names_and_types = get_column_names_and_types('main')
     DATABASE_SUBTABLES_NAMES_EXCEPTIONS = []
     DATABASE_SUBTABLES_NAMES_ARRAY = []
@@ -129,7 +129,7 @@ def create_main_table(connection):
     cursor.execute(query)
     connection.commit()
 
-def create_sub_tables(connection):
+def create_database_sub_tables(connection):
     console_log('info', 'Creating subtables')
     for element in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
         create_subt_exceptions(connection, element)

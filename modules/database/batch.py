@@ -3,7 +3,7 @@ from modules.database.database_functions import checksum_of_a_record, delete_car
 from modules.logging import console_log
 from tqdm import tqdm
 
-def batch_load(connection):
+def database_batch_load(connection):
     with open('./downloads/Default Cards.json', 'r', encoding='utf8') as f:
         data = json.load(f)
         count = {
