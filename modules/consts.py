@@ -32,6 +32,8 @@ APP_TAB_NAMES = {
 
 #DATABASE
 #DATABASE_SUBTABLES are now demonstrative, they are being wiped and build again in create.py
+DATABASE_MAIN = []
+DATABASE_SIDE = []
 DATABASE_SUBTABLES_NAMES_EXCEPTIONS = [
     'all_parts',
     'card_faces',

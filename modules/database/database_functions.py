@@ -1,6 +1,6 @@
 import sqlite3
 import zlib
-from modules.consts import DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT, DATABASE_FREQUENT_UPDATING
+from modules.consts import DATABASE_MAIN, DATABASE_SIDE, DATABASE_SUBTABLES_NAMES_EXCEPTIONS, DATABASE_SUBTABLES_NAMES_ARRAY, DATABASE_SUBTABLES_NAMES_OBJECT, DATABASE_FREQUENT_UPDATING
 
 def create_connection(db_path: str) -> sqlite3.Connection:
     '''Create connection to .db file via sqlite3 function from given path.'''
@@ -10,6 +10,46 @@ def create_connection(db_path: str) -> sqlite3.Connection:
         return connection
     except sqlite3.Error as e:
         print(e)
+
+def prepare_records_for_transaction(card: dict, main: list, side: list) -> None:
+    '''This function appends given list with tuples, each containing card's properties designated to be stored in main or side table.'''
+    to_main = []
+    to_side = []
+    frequent_updating = {}
+    
+    #side_table
+    to_side.append(card['id'])
+
+    for element in DATABASE_SIDE:
+        try: to_side.append(str(card[element]))
+        except KeyError: to_side.append('')
+
+    to_side = tuple(to_side)
+    side.append(to_side)
+
+    #main_table
+    to_main.append(card['id'])
+
+    for element in DATABASE_MAIN:
+        try: to_main.append(card[element])
+        except KeyError: to_main.append('')
+
+    for element in DATABASE_FREQUENT_UPDATING:
+        if element in card.keys():
+            frequent_updating[element] = card[element]
+            del card[element]
+
+    sort_key = create_sort_key_string(card)
+    to_main.append(sort_key)
+
+    checksum_card = checksum_of_a_record(card)
+    to_main.append(checksum_card)
+
+    checksum_frequent_updating = checksum_of_a_record(frequent_updating)
+    to_main.append(checksum_frequent_updating)
+
+    to_main = tuple(to_main)
+    main.append(to_main)
 
 def checksum_of_a_record(card: dict) -> int:
     '''Given certain dict, return its unique checksum value.'''
@@ -21,108 +61,52 @@ def checksum_of_a_record(card: dict) -> int:
         checksum = checksum ^ c1
     return checksum
 
-def add_card_to_db(connection: sqlite3.Connection, card):
-    insert_to_main = {}
-    insert_to_sub_exceptions = {}
-    insert_to_sub_array = {}
-    insert_to_sub_object = {}
-
-    for key in card:
-        if key in DATABASE_SUBTABLES_NAMES_EXCEPTIONS:
-            insert_to_sub_exceptions[key] = card[key]
-        elif key in DATABASE_SUBTABLES_NAMES_ARRAY:
-            insert_to_sub_array[key] = card[key]
-        elif key in DATABASE_SUBTABLES_NAMES_OBJECT:
-            insert_to_sub_object[key] = card[key]
-        else:
-            insert_to_main[key] = card[key]
-            
-    frequent_updating = get_frequent_updating_dict(card)
-    insert_to_main['checksum_card'] = checksum_of_a_record(card)
-    insert_to_main['checksum_frequent_updating'] = checksum_of_a_record(frequent_updating)
-
-    #main_table
-    column_names = [*insert_to_main.keys()]
-    try:
-        column_names[column_names.index('set')] = '"set"'
-    except ValueError:
-        pass
-    unpacked_dict = [*[insert_to_main[element] for element in insert_to_main.keys()]]
-    
-    placeholders = ', '.join('?' * len(column_names))
-    query = f'''
-    INSERT INTO main_table({', '.join(column_names)}) VALUES ({placeholders})
-    '''
-
-    cursor = connection.cursor()
-    cursor.execute(query, format_card_values(unpacked_dict))
-    connection.commit()
-
-    #sub_tables
-    for key in insert_to_sub_exceptions.keys():
-        if key == 'all_parts':
-            query_sub_table_all_parts(connection, card['id'], key, insert_to_sub_exceptions[key])
-        elif key == 'card_faces':
-            query_sub_table_card_faces(connection, card['id'], key, insert_to_sub_exceptions[key])
-
-    for key in insert_to_sub_array.keys():
-        query_sub_table_array(connection, card['id'], key, insert_to_sub_array[key])
-
-    for key in insert_to_sub_object.keys():
-        query_sub_table_object(connection, card['id'], key, insert_to_sub_object[key])
-
-def query_sub_table_all_parts(connection, card_id, sub_table_name, value):
-    column_names = query_get_table_columns(connection, sub_table_name)[1:]
-    
-    for element in value:
-        placeholders = ', '.join('?' * len(column_names))
-        query = f'''
-        INSERT INTO {sub_table_name}_table({', '.join(column_names)}) VALUES ({placeholders})
-        '''
-
-        cursor = connection.cursor()
-        cursor.execute(query, [card_id, *[element[x] for x in element.keys()]])
-        connection.commit()
-
-def query_sub_table_card_faces(connection, card_id, sub_table_name, value):
-    for face in value:
-        column_names = ['card_id', *face.keys()]
-        unpacked_dict = [card_id]
-        
-        for element in face.keys():
-            if 'color' not in element:
-                unpacked_dict.append(face[element])
+def sort_key_colors_mapping(array: list, color_map: dict) -> str:
+    '''Helper function to sort_key generation, used for assigning numeral value to given color combination.'''
+    found_colors = 0
+    for element in color_map:
+        for char in element:
+            if char in array:
+                found_colors = found_colors + 1
+                if found_colors == len(array):
+                    return color_map[element]
             else:
-                value = str(face[element])
-                unpacked_dict.append(value.replace("'", '').replace("[", '').replace("]", ''))
+                found_colors = 0
+                continue
+    return '32'
 
-        #put image_uris from here to another subtable card_faces_image_uris
-        for i, element in enumerate(column_names):
-            if element == 'image_uris':
-                query_sub_table_object(connection, card_id, 'card_faces_image_uris', unpacked_dict[i])
-                del column_names[i]
-                del unpacked_dict[i]
+def create_sort_key_string(card: dict) -> str:
+    '''Create sort_key string, to properly sort cards in collection by its value.'''
+    sort_key = ''
+    
+    try:
+        color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
+        color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
+        color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WBR': '24', 'UBG': '25' }
+        color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
 
-        placeholders = ', '.join('?' * len(column_names))
-        query = f'''
-        INSERT INTO {sub_table_name}_table({', '.join(column_names)}) VALUES ({placeholders})
-        '''
+        match (len(card['colors'])):
+            case 1: sort_key += sort_key_colors_mapping(card['colors'], color_map_one)
+            case 2: sort_key += sort_key_colors_mapping(card['colors'], color_map_two)
+            case 3: sort_key += sort_key_colors_mapping(card['colors'], color_map_three)
+            case 4: sort_key += sort_key_colors_mapping(card['colors'], color_map_four)
+            case 5: sort_key += '31'
+            case 0: sort_key += '32'
+    except KeyError:
+        sort_key += '32'
 
-        cursor = connection.cursor()
-        cursor.execute(query, format_card_values(unpacked_dict))
-        connection.commit()
+    try:
+        cmc = str(int(card['cmc']))
+        sort_key += cmc if len(cmc) > 1 else f'0{cmc}'
+    except KeyError: sort_key += '0'
 
-def query_sub_table_array(connection, card_id, sub_table_name, value):
-    column_names = query_get_table_columns(connection, sub_table_name)[1:]
+    try: sort_key += card['name'].lower().replace(' ', '')
+    except KeyError: pass
 
-    placeholders = ', '.join('?' * len(column_names))
-    query = f'''
-    INSERT INTO {sub_table_name}_table({', '.join(column_names)}) VALUES ({placeholders})
-    '''
-
-    cursor = connection.cursor()
-    cursor.execute(query, [card_id, ','.join(format_card_values(value))])
-    connection.commit()
+    try: sort_key += card['released_at']
+    except: pass
+        
+    return sort_key
 
 def query_sub_table_object(connection, card_id, sub_table_name, value):
     column_names = ['card_id', *value.keys()]
@@ -220,7 +204,7 @@ def get_card_from_db(connection, card_id) -> dict:
 
             if record:
                 if subtable in DATABASE_SUBTABLES_NAMES_ARRAY:
-                    card[subtable] = record[0]['array_value'].split(',')
+                    card[subtable] = record[0]['array_value'].split(', ')
                 elif subtable == 'card_faces_image_uris':
                     for row in range(len(record)):
                         card['card_faces'][row]['image_uris'] = {}
@@ -291,18 +275,6 @@ def update_checksum_in_main(connection, id, which_checksum, checksum_value):
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()
-
-def get_frequent_updating_dict(card):
-    frequent_updating = {}
-    for key in card:
-        if key in DATABASE_FREQUENT_UPDATING:
-            frequent_updating[key] = card[key]
-    for key in DATABASE_FREQUENT_UPDATING:
-        try:
-            del card[key]
-        except KeyError:
-            pass
-    return frequent_updating
 
 def find_cards_in_db(connection, query):
     cursor = connection.cursor()

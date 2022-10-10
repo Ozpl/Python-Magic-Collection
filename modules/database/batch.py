@@ -1,5 +1,6 @@
 import json
-from modules.database.database_functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, add_card_to_db, update_frequent_updating, update_checksum_in_main, get_frequent_updating_dict
+from modules.consts import DATABASE_FREQUENT_UPDATING
+from modules.database.database_functions import checksum_of_a_record, delete_card_from_db, query_get_id_and_checksum, prepare_records_for_transaction, update_frequent_updating, update_checksum_in_main
 from modules.logging import console_log
 from tqdm import tqdm
 
@@ -18,18 +19,24 @@ def database_batch_load(connection):
         for card in tqdm(data):
             #add card if not in db
             if card['id'] not in database_checksum:
-                add_card_to_db(connection, card)
+                prepare_records_for_transaction(connection, card)
                 count['new'] = count['new'] + 1
                 continue
 
-            current_frequent_updating = get_frequent_updating_dict(card)
+            current_frequent_updating = {}
+
+            for element in DATABASE_FREQUENT_UPDATING:
+                if element in card.keys():
+                    current_frequent_updating[element] = card[element]
+                    del card[element]
+
             current_frequent_updating_checksum = checksum_of_a_record(current_frequent_updating)
             current_card_checksum = checksum_of_a_record(card)
 
             #check all other changes
             if database_checksum[card['id']]['checksum_card'] != current_card_checksum:
                 delete_card_from_db(connection, card)
-                add_card_to_db(connection, card)
+                prepare_records_for_transaction(connection, card)
                 update_frequent_updating(connection, card, current_frequent_updating)
                 update_checksum_in_main(connection, card['id'], 'checksum_frequent_updating', current_frequent_updating_checksum)
                 count['card'] = count['card'] + 1
