@@ -1,6 +1,5 @@
 import os
 from datetime import datetime, timedelta
-from modules.consts import SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 import configparser
 
 class Config:
@@ -11,6 +10,27 @@ class Config:
 
     def create_default_config_file(self):
         self.config_parser['DEFAULT'] = {}
+        self.config_parser['FLAG'] = {
+            'downloaded_from_scryfall': 'false',
+            'database_was_created': 'false',
+            'collections_was_created': 'false',
+            'decks_was_created': 'false'
+        }
+        self.config_parser['FOLDER'] = {
+            'collections': 'collections',
+            'database': 'database',
+            'decks': 'decks',
+            'downloads': 'downloads',
+            'images': 'images',
+            'cards': 'images/cards',
+            'symbols': 'images/symbols',
+            'sets': 'images/sets'
+        }
+        self.config_parser['FILE'] = {
+            'database': f"./{self.config_parser['FOLDER']['database']}/database.db",
+            'collections': f"./{self.config_parser['FOLDER']['database']}/collections.db",
+            'decks': f"./{self.config_parser['FOLDER']['database']}/decks.db"
+        }
         self.config_parser['TIME'] = {
             'format_full': '%H:%M:%S %d/%m/%Y'.replace('%','%%')
         }
@@ -20,6 +40,18 @@ class Config:
             'time_period': str((60*60*24*7)),
             'last_updated': str((datetime.now() - timedelta(8)).strftime(self.config_parser['TIME']['format_full']))
         }
+        self.config_parser['APP'] = {
+            'name': 'Python Magic Collection',
+            'style': 'Fusion',
+            'font': 'MS Shell Dlg 2',
+            'font_size': str(13),
+            'collection': 'Collection',
+            'decks': 'Decks',
+            'add_cards': 'Add cards',
+            'wishlist': "Wishlist",
+            'import_export': 'Import/export',
+            'settings': 'Settings'
+        }
         self.config_parser['COLLECTION'] = {
             'image_type': 'normal',
             'grid_number_of_cards': '18',
@@ -27,19 +59,14 @@ class Config:
             'current_page': '1',
             'current_collection': 'maincollection'
         }
-        self.config_parser['FLAG'] = {
-            'downloaded_from_scryfall': 'false',
-            'database_was_created': 'false',
-            'collections_was_created': 'false',
-            'decks_was_created': 'false'
-        }
         self.save()
+        self.load()
 
     def save(self):
-        with open(f'{SETTINGS_FILE_STRUCTURE["config"]}', 'w') as f: self.config_parser.write(f)
+        with open(f'config.ini', 'w') as f: self.config_parser.write(f)
 
     def load(self):
-        self.config_parser.read(f'{SETTINGS_FILE_STRUCTURE["config"]}')
+        self.config_parser.read(f'config.ini')
 
     def get_boolean(self, section: str, option:str) -> bool:
         self.load()
@@ -62,15 +89,15 @@ class Config:
         self.save()
 
     def build_folder_structure(self) -> None:
-        for folder in SETTINGS_FOLDER_STRUCTURE:
-            if not os.path.exists(f'./{SETTINGS_FOLDER_STRUCTURE[folder]}'):
-                os.mkdir(f'./{SETTINGS_FOLDER_STRUCTURE[folder]}')
+        for folder in self.config_parser['FOLDER']:
+            if not os.path.exists(f"./{self.config_parser['FOLDER'][folder]}"):
+                os.mkdir(f"./{self.config_parser['FOLDER'][folder]}")
     
     def build_file_structure(self) -> None:
-         for file in SETTINGS_FILE_STRUCTURE:
+         for file in self.config_parser['FILE']:
             if file != 'config':
-                if not os.path.exists(SETTINGS_FILE_STRUCTURE[file]):
-                    with open(SETTINGS_FILE_STRUCTURE[file], 'w'): pass
+                if not os.path.exists(self.config_parser['FILE'][file]):
+                    with open(self.config_parser['FILE'][file], 'w'): pass
                     self.set_value('FLAG', f'{file}_was_created', 'true')
                 else:
                     self.set_value('FLAG', f'{file}_was_created', 'false')

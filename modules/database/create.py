@@ -1,28 +1,24 @@
 import sqlite3
 import json
 import re
+from typing import Any
+from modules.config import Config
 from modules.logging import console_log
-from modules.consts import DATABASE_MAIN, DATABASE_SIDE
+from modules.globals import DATABASE_INSERT_TO_MAIN
+from modules.database.database_functions import get_database_table_name
 
-def assign_data_type(element):
+def assign_data_type(element: Any) -> str:
     data_type = ''
 
-    if isinstance(element, list):
-        data_type = 'list'
-    elif isinstance(element, bool):
-        data_type = 'bool'
-    elif isinstance(element, float):
-        data_type = 'float'
-    elif isinstance(element, str):
-        data_type = 'string'
-    elif isinstance(element, int):
-        data_type = 'int'
-    elif isinstance(element, object):
-        data_type = 'object'
+    if isinstance(element, list): data_type = 'list'
+    elif isinstance(element, bool): data_type = 'bool'
+    elif isinstance(element, float): data_type = 'float'
+    elif isinstance(element, str): data_type = 'string'
+    elif isinstance(element, int): data_type = 'int'
+    elif isinstance(element, object): data_type = 'object'
 
     #Exception for null in value
-    if element is None:
-        data_type = 'string'
+    if element is None: data_type = 'string'
 
     #Exception for datetime values
     if isinstance(element, str):
@@ -32,8 +28,10 @@ def assign_data_type(element):
 
     return data_type
 
-def get_column_names_and_types():
-    with open('downloads/Default Cards.json', 'r', encoding='utf8') as f:
+def get_column_names_and_types() -> dict:
+    config = Config()
+
+    with open(f"./{config.get_value('FOLDER', 'downloads')}/{config.get_value('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
         j = json.load(f)
         names_and_types = {}
         for card in j:
@@ -47,46 +45,25 @@ def get_column_names_and_types():
                 pass
         return names_and_types
 
-def create_database_main_table(connection):
-    console_log('info', 'Creating main_table in database')
+def create_database_main_table(connection: sqlite3.Connection) -> None:
+    console_log('info', f"Creating {get_database_table_name()} in database")
     main_column_names_and_types = get_column_names_and_types()
 
-    query = 'CREATE TABLE IF NOT EXISTS main_table (\nid TEXT NOT NULL PRIMARY KEY,'
+    query = f'CREATE TABLE IF NOT EXISTS {get_database_table_name()} (\nid TEXT NOT NULL PRIMARY KEY,'
+
     for element in main_column_names_and_types:
-        if element == 'id':
-            continue
+        if element == 'id': continue
+
         match main_column_names_and_types[element]:
-            case 'string':
-                query += f'\n{element} TEXT,'
-                DATABASE_MAIN.append(element)
-            case 'float':
-                query += f'\n{element} FLOAT,'
-                DATABASE_MAIN.append(element)
-            case 'bool':
-                query += f'\n{element} BOOL,'
-                DATABASE_MAIN.append(element)
-            case 'int':
-                query += f'\n{element} INT,'
-                DATABASE_MAIN.append(element)
-            case 'datetime':
-                query += f'\n{element} DATETIME,'
-                DATABASE_MAIN.append(element)
-            case 'list' | 'object':
-                DATABASE_SIDE.append(element)
+            case 'string' | 'list' | 'object': query += f'\n{element} TEXT,'
+            case 'float': query += f'\n{element} FLOAT,'
+            case 'bool': query += f'\n{element} BOOL,'
+            case 'int': query += f'\n{element} INT,'
+            case 'datetime': query += f'\n{element} DATETIME,'
 
-    query += '\nsort_key TEXT,\nchecksum_card BIGINT,\nchecksum_frequent_updating BIGINT\n)'
+        DATABASE_INSERT_TO_MAIN.append(element)
 
-    cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
-
-def create_database_side_table(connection):
-    query = 'CREATE TABLE IF NOT EXISTS side_table (db_id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, id TEXT NOT NULL,'
-
-    for element in DATABASE_SIDE:
-        query += f'\n{element} TEXT,'
-
-    query = f"{query[:-1]})"
+    query += '\nsort_key TEXT)'
 
     cursor = connection.cursor()
     cursor.execute(query)
