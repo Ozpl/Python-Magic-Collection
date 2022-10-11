@@ -3,8 +3,16 @@ from modules.logging import console_log
 from modules.database.database_functions import query_get_table_columns, format_card_values
 import string
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 def create_collections_main_table(connection):
     query = '''CREATE TABLE IF NOT EXISTS main_table (
+=======
+=======
+>>>>>>> Stashed changes
+def create_collections_list(connection: sqlite3.Connection) -> None:
+    query = '''CREATE TABLE IF NOT EXISTS collection_list (
+>>>>>>> Stashed changes
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(255),
         formatted_name VARCHAR(255))

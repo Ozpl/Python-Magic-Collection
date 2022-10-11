@@ -1,13 +1,13 @@
 #My settings
 *.exe
 *.bak
+*.ini
 images/*.jpg
 images/*.png
 images/cards/*.jpg
 images/cards/*.png
 downloads/*.json
-database/database.db
-*.ini
+database/*.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

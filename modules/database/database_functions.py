@@ -41,8 +41,18 @@ def add_card_to_db(connection: sqlite3.Connection, card):
     insert_to_main['checksum_card'] = checksum_of_a_record(card)
     insert_to_main['checksum_frequent_updating'] = checksum_of_a_record(frequent_updating)
 
+<<<<<<< Updated upstream
     #main_table
     column_names = [*insert_to_main.keys()]
+=======
+def create_sort_key_string(card: dict) -> str:
+    '''Create sort_key string, to properly sort cards in collection by its value.'''
+    sort_key = ''
+
+    #TODO
+    #Add extra number for if card is land (0 - nonland, 1 - land)
+    
+>>>>>>> Stashed changes
     try:
         column_names[column_names.index('set')] = '"set"'
     except ValueError:

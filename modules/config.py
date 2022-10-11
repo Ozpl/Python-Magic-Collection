@@ -11,6 +11,28 @@ class Config:
 
     def create_default_config_file(self):
         self.config_parser['DEFAULT'] = {}
+<<<<<<< Updated upstream
+=======
+        self.config_parser['FLAG'] = {
+            'downloaded_from_scryfall': 'false',
+            'database_was_created': 'false',
+            'collections_was_created': 'false',
+            'decks_was_created': 'false'
+        }
+        self.config_parser['FOLDER'] = {
+            'database': 'database',
+            'downloads': 'downloads',
+            'images': 'images',
+            'cards': 'images/cards',
+            'symbols': 'images/symbols',
+            'sets': 'images/sets'
+        }
+        self.config_parser['FILE'] = {
+            'database': f"./{self.config_parser['FOLDER']['database']}/database.db",
+            'collections': f"./{self.config_parser['FOLDER']['database']}/collections.db",
+            'decks': f"./{self.config_parser['FOLDER']['database']}/decks.db"
+        }
+>>>>>>> Stashed changes
         self.config_parser['TIME'] = {
             'format_full': '%H:%M:%S %d/%m/%Y'.replace('%','%%')
         }

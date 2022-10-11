@@ -3,11 +3,24 @@ from modules.consts import SETTINGS_FILE_STRUCTURE
 from modules.config import Config
 from modules.ui import create_user_interface
 from modules.api import get_data_from_scryfall
+<<<<<<< Updated upstream
 from modules.database.create import create_database_main_table, create_database_sub_tables
 from modules.database.alpha import database_alpha_load
 from modules.database.batch import database_batch_load
 from modules.database.database_functions import create_connection
 from modules.database.collections import create_collections_main_table, create_collection
+=======
+from modules.database.create import create_database_main_table
+from modules.database.load import database_load
+from modules.database.database_functions import create_connection, get_card_from_db
+from modules.database.collections import create_collections_list, create_collection
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+
+#TODO
+#Put config into globals.py and import one variable
+>>>>>>> Stashed changes
 
 #Initiate configuration
 config = Config()
@@ -30,7 +43,7 @@ if config.get_boolean('FLAG', 'downloaded_from_scryfall'):
 #Manage collections database
 collections_connection = create_connection(SETTINGS_FILE_STRUCTURE['collections'])
 if config.get_boolean('FLAG', 'collections_was_created'):
-    create_collections_main_table(collections_connection)
+    create_collections_list(collections_connection)
     create_collection(collections_connection, 'Main collection')
 
 #Manage decks database
