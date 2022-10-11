@@ -21,6 +21,10 @@ def database_alpha_load(connection):
         placeholders = ', '.join('?' * len(column_names))
         query = f"INSERT INTO main_table({', '.join(column_names)}) VALUES ({placeholders})"
 
+        #Exception for 'set' column name
+        try: column_names[column_names.index('set')] = '"set"'
+        except ValueError: pass
+
         cur = connection.cursor()
         cur.executemany(query, transaction_main)
         connection.commit()
@@ -36,4 +40,4 @@ def database_alpha_load(connection):
         
         console_log('info', f'Alpha load done, added {len(data)} cards')
 
-
+        print()

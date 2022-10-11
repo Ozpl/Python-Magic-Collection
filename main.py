@@ -18,6 +18,8 @@ if not os.path.exists(SETTINGS_FILE_STRUCTURE['config']): config.create_default_
 config.build_folder_structure()
 config.build_file_structure()
 
+config.set_value('FLAG', 'database_was_created', 'true')
+
 #Download new bulk_data if needed
 get_data_from_scryfall()
 

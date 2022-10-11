@@ -22,7 +22,7 @@ def prepare_records_for_transaction(card: dict, main: list, side: list) -> None:
 
     for element in DATABASE_SIDE:
         try: to_side.append(str(card[element]))
-        except KeyError: to_side.append('')
+        except KeyError: to_side.append(None)
 
     to_side = tuple(to_side)
     side.append(to_side)
@@ -31,8 +31,10 @@ def prepare_records_for_transaction(card: dict, main: list, side: list) -> None:
     to_main.append(card['id'])
 
     for element in DATABASE_MAIN:
-        try: to_main.append(card[element])
-        except KeyError: to_main.append('')
+        try:
+            if element == '"set"': to_main.append(card['set'])
+            else: to_main.append(card[element])
+        except KeyError: to_main.append(None)
 
     for element in DATABASE_FREQUENT_UPDATING:
         if element in card.keys():
