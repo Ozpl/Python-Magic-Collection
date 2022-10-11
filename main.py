@@ -5,7 +5,7 @@ from modules.api import get_data_from_scryfall
 from modules.database.create import create_database_main_table
 from modules.database.load import database_load
 from modules.database.database_functions import create_connection, get_card_from_db
-from modules.database.collections import create_collections_main_table, create_collection
+from modules.database.collections import create_collections_list, create_collection
 
 #TODO
 #Put config into globals.py and import one variable
@@ -28,7 +28,7 @@ if config.get_boolean('FLAG', 'database_was_created') or config.get_boolean('FLA
 #Manage collections database
 collections_connection = create_connection(config.get_value('FILE', 'collections'))
 if config.get_boolean('FLAG', 'collections_was_created'):
-    create_collections_main_table(collections_connection)
+    create_collections_list(collections_connection)
     create_collection(collections_connection, 'Main collection')
 
 #Manage decks database
