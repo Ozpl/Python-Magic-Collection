@@ -3,9 +3,8 @@ import shutil
 from PyQt5.QtCore import Qt, QRect, QPoint
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import QPixmap, QFont, QResizeEvent, QImage
-from modules.consts import APP_NAME, APP_STYLE, APP_TAB_NAMES, APP_FONT_NAME, APP_FONT_SIZE, SETTINGS_FOLDER_STRUCTURE, SETTINGS_FILE_STRUCTURE
 from modules.config import Config
-from modules.database.database_functions import get_card_from_db, find_cards_in_db, get_card_from_db_to_add_cards
+from modules.database.database_functions import get_card_from_db, get_card_ids_list, get_card_from_db
 from modules.database.query import construct_query
 from modules.database.collections import create_collection, get_all_collections_names_as_array, add_card_to_collection, get_card_from_collection
 from modules.logging import console_log
@@ -13,7 +12,7 @@ import os
 
 config = Config()
 #you need this if if .ini file is not created yet
-if os.path.exists(SETTINGS_FILE_STRUCTURE['config']):
+if os.path.exists('config.ini'):
     if config.get_value('COLLECTION', 'image_type') == 'png': image_extension = 'png'
     else: image_extension = 'jpg'
 
@@ -195,10 +194,10 @@ class UI(QWidget):
         app_layout.addWidget(tab_bar)
         self.setLayout(app_layout)
         
-        self.app_font = QFont(APP_FONT_NAME, APP_FONT_SIZE)
+        self.app_font = QFont(config.get_value('APP', 'font'), int(config.get_value('APP', 'font_size')))
         self.setFont(self.app_font)
-        self.setWindowTitle(APP_NAME)
-        QApplication.setStyle(APP_STYLE)
+        self.setWindowTitle(config.get_value('APP', 'name'))
+        QApplication.setStyle(config.get_value('APP', 'style'))
 
     def resizeEvent(self, event) -> None:
         update_sizes_of_collection_tab()
@@ -206,7 +205,7 @@ class UI(QWidget):
 
 #Global functions
 def download_image_if_not_downloaded(id):
-    file_name = f"{SETTINGS_FOLDER_STRUCTURE['cards']}/{id}.{image_extension}"
+    file_name = f"{config['FOLDER']['cards']}/{id}.{image_extension}"
 
     if not os.path.exists(file_name):
         card = get_card_from_db(database_connection, id)
@@ -248,7 +247,7 @@ def refresh_collection_names():
 #Collection
 def create_collection_tab():
     #Hierarchy
-    tab_bar.addTab(col, APP_TAB_NAMES['collection'])
+    tab_bar.addTab(col, config.get_value('APP', 'collection'))
     col.setLayout(col_lyt)
     col_lyt.addWidget(col_lyt_crd)
     col_lyt_crd.setLayout(col_lyt_crd_lyt)
@@ -301,23 +300,23 @@ def update_sizes_of_collection_tab():
 def create_collection_tab_filters():
     for element in col_lyt_crd_lyt_flt_lyt_clr:
         element.setScaledContents(True)
-        element.setPixmap(QPixmap(f'{SETTINGS_FOLDER_STRUCTURE["symbols"]}/{element.text()}'))
+        element.setPixmap(QPixmap(f"{config.get_value('FOLDER', 'symbols')}/{element.text()}"))
 
     for element in col_lyt_crd_lyt_flt_lyt_cmc:
         element.setScaledContents(True)
-        element.setPixmap(QPixmap(f'{SETTINGS_FOLDER_STRUCTURE["symbols"]}/{element.text()}'))
+        element.setPixmap(QPixmap(f"{config.get_value('FOLDER', 'symbols')}/{element.text()}"))
 
     col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_pressed)
 #Collection -> Filters -> Events
 def collection_filters_searchbox_pressed():
     if col_lyt_crd_lyt_flt_lyt_sbx.text():
-        filtered_cards = find_cards_in_db(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
+        filtered_cards = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
         for id in filtered_cards:
             download_image_if_not_downloaded(id)
 
         for i, element in enumerate(return_grid_cards_groupboxes_as_list()):
             if i == len(filtered_cards): break
-            file_name = f"{SETTINGS_FOLDER_STRUCTURE['cards']}/{filtered_cards[i]}.{image_extension}"
+            file_name = f"{config.get_value('FOLDER', 'cards')}/{filtered_cards[i]}.{image_extension}"
 
             #0 - layout, 1 - label, 2 - image
             element.children()[1].setText(f'{filtered_cards[i]}')
@@ -354,7 +353,7 @@ def create_decks_tab():
 
 #Add cards
 def create_add_cards_tab():
-    tab_bar.addTab(add, APP_TAB_NAMES['add_cards'])
+    tab_bar.addTab(add, config.get_value('APP', 'add_cards'))
     add.setLayout(add_lyt)
     add_lyt.addWidget(add_lyt_gbx)
     add_lyt_gbx.setLayout(add_lyt_gbx_lyt)
@@ -378,14 +377,14 @@ def create_add_cards_tab():
 #Add cards -> Search -> Events
 def add_cards_search_button_pressed():
     global add_cards_found_cards, add_cards_sorted_list
-    add_cards_found_cards = find_cards_in_db(database_connection, construct_query(f'name:"{add_lyt_gbx_lyt_src_lyt_sbx.text()}"'))
+    add_cards_found_cards = get_card_ids_list(database_connection, construct_query(f'name:"{add_lyt_gbx_lyt_src_lyt_sbx.text()}"'))
     
     add_lyt_gbx_lyt_lst.clear()
 
     unsorted_list = []
 
     for element in add_cards_found_cards:
-        card = get_card_from_db_to_add_cards(database_connection, element)
+        card = get_card_from_db(database_connection, element)
         unsorted_list.append({
             'id': card['id'],
             'name': card['name'],
@@ -403,7 +402,7 @@ def add_cards_search_button_pressed():
     add_lyt_gbx_lyt_lst.addItems(list(map(lambda d: d['display'], add_cards_sorted_list)))
 def add_cards_list_selection_changed():
     current_index = add_lyt_gbx_lyt_lst.currentRow()
-    file_name = f"{SETTINGS_FOLDER_STRUCTURE['cards']}/{add_cards_found_cards[current_index]}.{image_extension}"
+    file_name = f"{config.get_value('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
     add_lyt_gbx_lyt_res_lyt_iml.setPixmap(QPixmap(file_name))
     add_cards_update_card_count()
 def add_cards_add_regular():
@@ -441,7 +440,7 @@ def create_import_export_tab():
 
 #Settings
 def create_settings_tab():
-    tab_bar.addTab(stt, APP_TAB_NAMES['settings'])
+    tab_bar.addTab(stt, config.get_value('APP', 'settings'))
     stt.setLayout(stt_lyt)
 
 
