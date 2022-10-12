@@ -1,11 +1,11 @@
-import os
+from configparser import ConfigParser
 from datetime import datetime, timedelta
-import configparser
+from os import mkdir, path
 
 class Config:
     '''Class which stores all settable variables as strings in .ini file using ConfigParser library. Use 'set_value' and 'get_x', where x can be 'bool', 'int', 'float' or 'value'.'''
     def __init__(self):
-        self.config_parser = configparser.ConfigParser()
+        self.config_parser = ConfigParser()
         self.load()
 
     def create_default_config_file(self):
@@ -80,24 +80,24 @@ class Config:
         self.load()
         return self.config_parser.getfloat(section.upper(), option.lower())
 
-    def get_value(self, section: str, option: str) -> str:
+    def get(self, section: str, option: str) -> str:
         self.load()
         return self.config_parser[section.upper()][option.lower().lower()]
 
-    def set_value(self, section: str, option: str, value: str) -> None:
+    def set(self, section: str, option: str, value: str) -> None:
         self.config_parser[section.upper()][option.lower()] = value
         self.save()
 
     def build_folder_structure(self) -> None:
         for folder in self.config_parser['FOLDER']:
-            if not os.path.exists(f"./{self.config_parser['FOLDER'][folder]}"):
-                os.mkdir(f"./{self.config_parser['FOLDER'][folder]}")
+            if not path.exists(f"./{self.config_parser['FOLDER'][folder]}"):
+                mkdir(f"./{self.config_parser['FOLDER'][folder]}")
     
     def build_file_structure(self) -> None:
          for file in self.config_parser['FILE']:
             if file != 'config':
-                if not os.path.exists(self.config_parser['FILE'][file]):
+                if not path.exists(self.config_parser['FILE'][file]):
                     with open(self.config_parser['FILE'][file], 'w'): pass
-                    self.set_value('FLAG', f'{file}_was_created', 'true')
+                    self.set('FLAG', f'{file}_was_created', 'true')
                 else:
-                    self.set_value('FLAG', f'{file}_was_created', 'false')
+                    self.set('FLAG', f'{file}_was_created', 'false')

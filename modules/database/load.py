@@ -1,38 +1,39 @@
-import json
-import sqlite3
-from modules.globals import DATABASE_INSERT_TO_MAIN
-from modules.config import Config
-from modules.database.database_functions import prepare_records_for_transaction, get_database_table_name
-from modules.logging import console_log
+from json import load
+from os import path, listdir, remove
+from sqlite3 import Connection
 from tqdm import tqdm
+from modules.globals import DATABASE_INSERT_TO_MAIN
+from modules.globals import config
+from modules.database.database_functions import get_database_table_name, prepare_records_for_transaction
+from modules.logging import console_log
 
-def database_load(connection: sqlite3.Connection) -> None:
-    config = Config()
-    
-    with open(f"./{config.get_value('FOLDER', 'downloads')}/{config.get_value('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
+def database_load(connection: Connection) -> None:    
+    with open(f"./{config.get('FOLDER', 'downloads')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
         console_log('info', 'Alpha load started')
-        data = json.load(f)
-        console_log('info', 'Loaded .json file')
+        data = load(f)
+        console_log('info', 'Successfully loaded .json file')
 
-        transaction_main = []
+        transaction = []
         
         for card in tqdm(data):
-            prepare_records_for_transaction(card, transaction_main)
+            prepare_records_for_transaction(card, transaction)
 
         #Main
         column_names = ['id', *DATABASE_INSERT_TO_MAIN, 'sort_key']
         placeholders = ', '.join('?' * len(column_names))
-        query = f"INSERT INTO {get_database_table_name()}({', '.join(column_names)}) VALUES ({placeholders})"
+        query = f"INSERT OR REPLACE INTO {get_database_table_name()}({', '.join(column_names)}) VALUES ({placeholders})"
 
         #Exception for 'set' column name
         try: column_names[column_names.index('set')] = '"set"'
         except ValueError: pass
 
         cur = connection.cursor()
-        cur.executemany(query, transaction_main)
+        cur.executemany(query, transaction)
         connection.commit()
-        
+
         console_log('info', f'Alpha load done, added {len(data)} cards')
 
-        #TODO
-        #Delete all json files in downloads folder
+    for file in listdir(config.get('FOLDER', 'downloads')):
+        f = path.join(config.get('FOLDER', 'downloads'), file)
+        if path.isfile(f):
+            remove(f)

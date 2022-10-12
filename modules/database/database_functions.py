@@ -1,14 +1,14 @@
-import sqlite3
-from modules.config import Config
+from sqlite3 import connect, Connection, Error
+from modules.globals import config
 from modules.globals import DATABASE_INSERT_TO_MAIN
 
-def create_connection(db_path: str) -> sqlite3.Connection:
+def create_connection(db_path: str) -> Connection:
     '''Create connection to .db file via sqlite3 function from given path.'''
     connection = None
     try:
-        connection = sqlite3.connect(db_path)
+        connection = connect(db_path)
         return connection
-    except sqlite3.Error as e:
+    except Error as e:
         print(e)
 
 def prepare_records_for_transaction(card: dict, main: list) -> None:
@@ -83,7 +83,7 @@ def create_sort_key_string(card: dict) -> str:
         
     return sort_key
 
-def query_get_table_columns(connection: sqlite3.Connection, table_name: str):
+def query_get_table_columns(connection: Connection, table_name: str):
     query = f'''
     SELECT * FROM {table_name} LIMIT 1
     '''
@@ -102,10 +102,9 @@ def format_card_values(element: list) -> list:
     return result
 
 def get_database_table_name() -> str:
-    config = Config()
-    return config.get_value('BULK', 'data_type').replace(' ', '_').lower()
+    return config.get('BULK', 'data_type').replace(' ', '_').lower()
 
-def get_card_from_db(connection: sqlite3.Connection, card_id: str) -> dict:
+def get_card_from_db(connection: Connection, card_id: str) -> dict:
     query = f'''
         SELECT * FROM {get_database_table_name()}
         WHERE id = '{card_id}'
@@ -121,7 +120,7 @@ def get_card_from_db(connection: sqlite3.Connection, card_id: str) -> dict:
 
     return card
 
-def get_card_ids_list(connection: sqlite3.Connection, query: str) -> list:
+def get_card_ids_list(connection: Connection, query: str) -> list:
     cursor = connection.cursor()
     cursor.execute(query)
     record = cursor.fetchall()

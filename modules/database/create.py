@@ -1,8 +1,8 @@
-import sqlite3
-import json
-import re
+from json import load
+from sqlite3 import Connection
+from re import compile
 from typing import Any
-from modules.config import Config
+from modules.globals import config
 from modules.logging import console_log
 from modules.globals import DATABASE_INSERT_TO_MAIN
 from modules.database.database_functions import get_database_table_name
@@ -22,17 +22,15 @@ def assign_data_type(element: Any) -> str:
 
     #Exception for datetime values
     if isinstance(element, str):
-        r = re.compile('\d\d\d\d-\d\d-\d\d')
-        if r.match(element) is not None:
+        re = compile('\d\d\d\d-\d\d-\d\d')
+        if re.match(element) is not None:
             data_type = 'datetime'
 
     return data_type
 
 def get_column_names_and_types() -> dict:
-    config = Config()
-
-    with open(f"./{config.get_value('FOLDER', 'downloads')}/{config.get_value('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
-        j = json.load(f)
+    with open(f"./{config.get('FOLDER', 'downloads')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
+        j = load(f)
         names_and_types = {}
         for card in j:
             try:
@@ -45,7 +43,7 @@ def get_column_names_and_types() -> dict:
                 pass
         return names_and_types
 
-def create_database_main_table(connection: sqlite3.Connection) -> None:
+def create_database_main_table(connection: Connection) -> None:
     console_log('info', f"Creating {get_database_table_name()} in database")
     main_column_names_and_types = get_column_names_and_types()
 

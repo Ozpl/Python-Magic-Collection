@@ -1,13 +1,14 @@
-import logging
+from logging import basicConfig, critical, DEBUG, debug, error, info, warning
 
-def console_log(type, message):
-    level = logging.DEBUG
+def console_log(type: str, message: str) -> None:
+    '''Types message to terminal using logging library.'''
+    level = DEBUG
     format = '[%(levelname)s] %(asctime)s - %(message)s'
-    logging.basicConfig(level=level, format=format)
+    basicConfig(level=level, format=format)
 
     match str(type).lower():
-        case 'debug': logging.debug(message)
-        case 'info': logging.info(message)
-        case 'warning': logging.warning(message)
-        case 'error': logging.error(message)
-        case 'critical': logging.critical(message)
+        case 'debug': debug(message)
+        case 'info': info(message)
+        case 'warning': warning(message)
+        case 'error': error(message)
+        case 'critical': critical(message)

@@ -1,29 +1,28 @@
-import requests
-import shutil
-from PyQt5.QtCore import Qt, QRect, QPoint
-from PyQt5.QtWidgets import *
-from PyQt5.QtGui import QPixmap, QFont, QResizeEvent, QImage
-from modules.config import Config
-from modules.database.database_functions import get_card_from_db, get_card_ids_list, get_card_from_db
+from cgitb import text
+from os import path
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QImage, QPixmap
+from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from requests import get
+from shutil import copyfileobj
+from modules.database.database_functions import get_card_from_db, get_card_ids_list
 from modules.database.query import construct_query
-from modules.database.collections import create_collection, get_all_collections_names_as_array, add_card_to_collection, get_card_from_collection
+from modules.database.collections import add_card_to_collection, create_collection, get_all_collections_names_as_array, get_card_from_collection
+from modules.globals import config
 from modules.logging import console_log
-import os
 
-config = Config()
-#you need this if if .ini file is not created yet
-if os.path.exists('config.ini'):
-    if config.get_value('COLLECTION', 'image_type') == 'png': image_extension = 'png'
+if path.exists('config.ini'):
+    if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
     else: image_extension = 'jpg'
 
 app = QApplication([])
-app_layout = QVBoxLayout()
+app_lyt = QVBoxLayout()
 tab_bar = QTabWidget()
 
 filtered_cards = []
 add_cards_found_cards = []
 
-hierarchy = [
+widget_hierarchy = [
 {'name': 'cor', 'type': 'QWidget'},
     {'name': 'cor_lyt', 'type': 'QHBoxLayout'},
         {'name': 'cor_lyt_chk', 'type': 'QCheckBox'},
@@ -49,9 +48,10 @@ hierarchy = [
                     {'name': 'col_lyt_crd_lyt_grd_lyt', 'type': 'QGridLayout'},
                         #Inside col_lyt_crd_lyt_grd_lyt
                         {'name': 'col_lyt_crd_lyt_grd_lyt_crd', 'type': '[QGroupBox]'},
-                            {'name': 'col_lyt_crd_lyt_grd_lyt_crd_lbl', 'type': 'QLabel'},
-                            {'name': 'col_lyt_crd_lyt_grd_lyt_crd_iml', 'type': 'QLabel'},
-                                {'name': 'col_lyt_crd_lyt_grd_lyt_crd_iml_pix', 'type': 'QPixMap'},
+                            {'name': 'col_lyt_crd_lyt_grd_lyt_crd_lyt', 'type': '[QVBoxLayout]'},
+                                {'name': 'col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl', 'type': 'QLabel'},
+                                {'name': 'col_lyt_crd_lyt_grd_lyt_crd_lyt_iml', 'type': 'QLabel'},
+                                    {'name': 'col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix', 'type': 'QPixMap'},
         {'name': 'col_lyt_pre', 'type': 'QGroupBox'},
             {'name': 'col_lyt_pre_lyt', 'type': 'QVBoxLayout'},
                 {'name': 'col_lyt_pre_lyt_iml', 'type': 'QLabel'},
@@ -108,12 +108,15 @@ col_lyt_crd_lyt_tag = QGroupBox()
 col_lyt_crd_lyt_tag_lyt = QHBoxLayout()
 col_lyt_crd_lyt_grd = QGroupBox()
 col_lyt_crd_lyt_grd_lyt = QGridLayout()
-
+col_lyt_crd_lyt_grd_lyt_crd = [] #[QGroupBox]
+col_lyt_crd_lyt_grd_lyt_crd_lyt = [] #[QVBoxLayout]
+col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl = [] #[QLabel]
+col_lyt_crd_lyt_grd_lyt_crd_lyt_iml = [] #[QLabel]
+col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix = [] #[QPixmap]
 col_lyt_pre = QGroupBox()
 col_lyt_pre_lyt = QVBoxLayout()
-col_lyt_pre_lyt_iml = QLabel('Image')
-col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
-col_lyt_pre_lyt_iml.setScaledContents(True)
+col_lyt_pre_lyt_iml = QLabel()
+col_lyt_pre_lyt_iml_pix = QPixmap()
 col_lyt_pre_lyt_inf = QLabel('Regular: X Foil: X   EUR: 1345.99E USD: 1345.99D')
 col_lyt_pre_lyt_des = QScrollArea()
 col_lyt_pre_lyt_des_lbl = QLabel('This is card description')
@@ -191,15 +194,16 @@ class UI(QWidget):
 
         refresh_collection_names()
 
-        app_layout.addWidget(tab_bar)
-        self.setLayout(app_layout)
+        app_lyt.addWidget(tab_bar)
+        self.setLayout(app_lyt)
         
-        self.app_font = QFont(config.get_value('APP', 'font'), int(config.get_value('APP', 'font_size')))
+        self.app_font = QFont(config.get('APP', 'font'), config.get_int('APP', 'font_size'))
         self.setFont(self.app_font)
-        self.setWindowTitle(config.get_value('APP', 'name'))
-        QApplication.setStyle(config.get_value('APP', 'style'))
+        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
+        QApplication.setStyle(config.get('APP', 'style'))
 
     def resizeEvent(self, event) -> None:
+        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
         update_sizes_of_collection_tab()
         QWidget.resizeEvent(self, event)
 
@@ -207,14 +211,14 @@ class UI(QWidget):
 def download_image_if_not_downloaded(id):
     file_name = f"{config['FOLDER']['cards']}/{id}.{image_extension}"
 
-    if not os.path.exists(file_name):
+    if not path.exists(file_name):
         card = get_card_from_db(database_connection, id)
-        r = requests.get(card['image_uris'][config.get_value('COLLECTION', 'image_type')], stream = True)
+        r = get(card['image_uris'][config.get('COLLECTION', 'image_type')], stream = True)
         if r.status_code == 200:
             r.raw.decode_content = True
             with open(file_name,'wb') as f:
-                shutil.copyfileobj(r.raw, f)
-def return_grid_cards_groupboxes_as_list():
+                copyfileobj(r.raw, f)
+def return_grid_cards_groupboxes():
     groupboxes = []
     n_cards = config.get_int('COLLECTION', 'grid_number_of_cards')
     n_rows = config.get_int('COLLECTION', 'grid_number_of_rows')
@@ -247,7 +251,7 @@ def refresh_collection_names():
 #Collection
 def create_collection_tab():
     #Hierarchy
-    tab_bar.addTab(col, config.get_value('APP', 'collection'))
+    tab_bar.addTab(col, config.get('APP', 'collection'))
     col.setLayout(col_lyt)
     col_lyt.addWidget(col_lyt_crd)
     col_lyt_crd.setLayout(col_lyt_crd_lyt)
@@ -275,16 +279,17 @@ def create_collection_tab():
 
     create_collection_tab_filters()
     create_collection_tab_grid()
-    #
     create_collection_tab_preview()
     update_sizes_of_collection_tab()
 #Collection -> Sizes
 def update_sizes_of_collection_tab():
-    col_lyt_pre.setMinimumWidth(300)
-    col_lyt_pre.setMaximumWidth(450)
+    col_lyt_pre.setMinimumWidth(383)
+    col_lyt_pre.setMaximumWidth(383)
 
     col_lyt_crd_lyt_flt.setMinimumHeight(65)
     col_lyt_crd_lyt_flt.setMaximumHeight(65)
+    col_lyt_crd_lyt_flt_lyt_sbx.setMinimumWidth(125)
+
     col_lyt_crd_lyt_tag.setMinimumHeight(50)
     col_lyt_crd_lyt_tag.setMaximumHeight(50)
     
@@ -292,19 +297,22 @@ def update_sizes_of_collection_tab():
     for element in col_lyt_crd_lyt_flt_lyt_clr: element.setMaximumSize(icon_size, icon_size)
     for element in col_lyt_crd_lyt_flt_lyt_cmc: element.setMaximumSize(icon_size, icon_size)
 
-    grid_card_height = int(col_lyt_crd_lyt_grd.frameGeometry().height() / config.get_int('COLLECTION', 'grid_number_of_rows') - 20)
-    for element in return_grid_cards_groupboxes_as_list():
-        element.setMaximumSize(int(grid_card_height * 0.72), grid_card_height)
+    for i in range(len(col_lyt_crd_lyt_grd_lyt_crd)):
+        w = col_lyt_crd_lyt_grd_lyt_crd[i].geometry().width()-75
+        h = col_lyt_crd_lyt_grd_lyt_crd[i].geometry().height()-75
+        pix = col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix[i].scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        col_lyt_crd_lyt_grd_lyt_crd_lyt_iml[i].setPixmap(pix)
+        col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl[i].setText(f'test{i}')
 
 #Collection -> Filters
 def create_collection_tab_filters():
     for element in col_lyt_crd_lyt_flt_lyt_clr:
         element.setScaledContents(True)
-        element.setPixmap(QPixmap(f"{config.get_value('FOLDER', 'symbols')}/{element.text()}"))
+        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
 
     for element in col_lyt_crd_lyt_flt_lyt_cmc:
         element.setScaledContents(True)
-        element.setPixmap(QPixmap(f"{config.get_value('FOLDER', 'symbols')}/{element.text()}"))
+        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
 
     col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_pressed)
 #Collection -> Filters -> Events
@@ -314,9 +322,9 @@ def collection_filters_searchbox_pressed():
         for id in filtered_cards:
             download_image_if_not_downloaded(id)
 
-        for i, element in enumerate(return_grid_cards_groupboxes_as_list()):
+        for i, element in enumerate(return_grid_cards_groupboxes()):
             if i == len(filtered_cards): break
-            file_name = f"{config.get_value('FOLDER', 'cards')}/{filtered_cards[i]}.{image_extension}"
+            file_name = f"{config.get('FOLDER', 'cards')}/{filtered_cards[i]}.{image_extension}"
 
             #0 - layout, 1 - label, 2 - image
             element.children()[1].setText(f'{filtered_cards[i]}')
@@ -334,17 +342,28 @@ def create_collection_tab_grid():
         for j in range(cards_per_row):
             gbx = QGroupBox()
             gbx_lyt = QVBoxLayout()
+            lbl = QLabel('test')
             iml = QLabel()
-            iml.setScaledContents(True)
+            iml.setObjectName('Image')
+            #iml.setScaledContents(True)
             imp = QPixmap(f'images/muldrotha_normal.jpg')
-            iml.setPixmap(imp)
-            gbx_lyt.addWidget(QLabel())
+            imp_scl = imp.scaled(50, 50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            iml.setPixmap(imp_scl)
+            gbx_lyt.addWidget(lbl)
             gbx_lyt.addWidget(iml)
             gbx.setLayout(gbx_lyt)
             col_lyt_crd_lyt_grd_lyt.addWidget(gbx, i, j)
+            col_lyt_crd_lyt_grd_lyt_crd.append(gbx)
+            col_lyt_crd_lyt_grd_lyt_crd_lyt.append(gbx_lyt)
+            col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl.append(lbl)
+            col_lyt_crd_lyt_grd_lyt_crd_lyt_iml.append(iml)
+            col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix.append(imp)
 
 #Collection -> Preview
 def create_collection_tab_preview():
+    col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
+    pix = col_lyt_pre_lyt_iml_pix.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    col_lyt_pre_lyt_iml.setPixmap(pix)
     col_lyt_pre_lyt_inf.setWordWrap(True)
 
 #Decks
@@ -353,7 +372,7 @@ def create_decks_tab():
 
 #Add cards
 def create_add_cards_tab():
-    tab_bar.addTab(add, config.get_value('APP', 'add_cards'))
+    tab_bar.addTab(add, config.get('APP', 'add_cards'))
     add.setLayout(add_lyt)
     add_lyt.addWidget(add_lyt_gbx)
     add_lyt_gbx.setLayout(add_lyt_gbx_lyt)
@@ -402,13 +421,13 @@ def add_cards_search_button_pressed():
     add_lyt_gbx_lyt_lst.addItems(list(map(lambda d: d['display'], add_cards_sorted_list)))
 def add_cards_list_selection_changed():
     current_index = add_lyt_gbx_lyt_lst.currentRow()
-    file_name = f"{config.get_value('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
+    file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
     add_lyt_gbx_lyt_res_lyt_iml.setPixmap(QPixmap(file_name))
     add_cards_update_card_count()
 def add_cards_add_regular():
     add_card_to_collection(
         collections_connection,
-        config.get_value('COLLECTION', 'current_collection'), 
+        config.get('COLLECTION', 'current_collection'), 
         add_cards_found_cards[add_lyt_gbx_lyt_lst.currentRow()],
         1,
         0,
@@ -418,7 +437,7 @@ def add_cards_add_regular():
 def add_cards_add_foil():
     add_card_to_collection(
         collections_connection,
-        config.get_value('COLLECTION', 'current_collection'), 
+        config.get('COLLECTION', 'current_collection'), 
         add_cards_found_cards[add_lyt_gbx_lyt_lst.currentRow()],
         0,
         1,
@@ -426,7 +445,7 @@ def add_cards_add_foil():
         add_cards_sorted_list[add_lyt_gbx_lyt_lst.currentRow()]['sort_key'])
     add_cards_update_card_count()
 def add_cards_update_card_count():
-    selected_card = get_card_from_collection(collections_connection, config.get_value('COLLECTION', 'current_collection'), add_cards_found_cards[add_lyt_gbx_lyt_lst.currentRow()])
+    selected_card = get_card_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'), add_cards_found_cards[add_lyt_gbx_lyt_lst.currentRow()])
 
     add_lyt_gbx_lyt_res_lyt_lbl.setText(f"You currently have {selected_card['regular']} regulars and {selected_card['foil']} foils in collection")
 
@@ -440,7 +459,7 @@ def create_import_export_tab():
 
 #Settings
 def create_settings_tab():
-    tab_bar.addTab(stt, config.get_value('APP', 'settings'))
+    tab_bar.addTab(stt, config.get('APP', 'settings'))
     stt.setLayout(stt_lyt)
 
 

@@ -1,10 +1,10 @@
+from string import ascii_letters, digits
 from sqlite3 import OperationalError
-import sqlite3
+from sqlite3 import Connection
 from modules.logging import console_log
-from modules.database.database_functions import query_get_table_columns, format_card_values
-import string
+from modules.database.database_functions import format_card_values, query_get_table_columns
 
-def create_collections_list(connection: sqlite3.Connection) -> None:
+def create_collections_list(connection: Connection) -> None:
     query = '''CREATE TABLE IF NOT EXISTS collection_list (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name VARCHAR(255),
@@ -15,9 +15,9 @@ def create_collections_list(connection: sqlite3.Connection) -> None:
     cursor.execute(query)
     connection.commit()
 
-def create_collection(connection: sqlite3.Connection, name: str) -> None:
+def create_collection(connection: Connection, name: str) -> None:
     try:
-        whitelist = string.ascii_letters + string.digits
+        whitelist = ascii_letters + digits
         formatted_name = ''
         for char in name.lower():
             if char in whitelist:
@@ -46,10 +46,12 @@ def create_collection(connection: sqlite3.Connection, name: str) -> None:
         cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
+
+        console_log('info', f'{formatted_name} created successfully')
     except OperationalError:
         console_log('error', f'Failed to create "{name}" collection')
 
-def get_all_collections_names_as_array(connection: sqlite3.Connection) -> list:
+def get_all_collections_names_as_array(connection: Connection) -> list:
     query = "SELECT name FROM collection_list"
                 
     cursor = connection.cursor()
@@ -62,7 +64,7 @@ def get_all_collections_names_as_array(connection: sqlite3.Connection) -> list:
 
     return collection_names
 
-def get_card_ids_from_collection(connection: sqlite3.Connection, collection_name: str) -> list:
+def get_card_ids_from_collection(connection: Connection, collection_name: str) -> list:
     query = f"SELECT card_id FROM {collection_name}"
 
     cursor = connection.cursor()
@@ -75,7 +77,7 @@ def get_card_ids_from_collection(connection: sqlite3.Connection, collection_name
 
     return card_ids
 
-def get_card_from_collection(connection: sqlite3.Connection, collection_name: str, id: str) -> dict:
+def get_card_from_collection(connection: Connection, collection_name: str, id: str) -> dict:
     query = f"SELECT * FROM {collection_name} WHERE card_id = '{id}'"
 
     cursor = connection.cursor()
@@ -88,7 +90,7 @@ def get_card_from_collection(connection: sqlite3.Connection, collection_name: st
     else:
         return {'card_id': id, 'regular': 0, 'foil': 0, 'tags': '', 'sort_key': ''}
 
-def add_card_to_collection(connection: sqlite3.Connection, collection_name: str, id: str, regular: int, foil: int, operation: str, sort_key: str) -> None:
+def add_card_to_collection(connection: Connection, collection_name: str, id: str, regular: int, foil: int, operation: str, sort_key: str) -> None:
     column = 'regular' if regular > 0 else 'foil'
     query = f"SELECT {column} FROM {collection_name} WHERE card_id = '{id}'"
 
