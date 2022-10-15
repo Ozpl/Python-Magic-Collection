@@ -1,97 +1,84 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+from modules.database.database_functions import get_database_table_name
 
-
+# In[6]:
 QUERY_TRANSLATE = [
     {
-        "table_name": "colors",
-        "table_type": "array",
+        "columns": ["colors"],
+        "type": "array",
         "query_command": ["color", "c"]
     },
 
     {
-        "table_name": "color_identity",
-        "table_type": "array",
+        "columns": ["color_identity"],
+        "type": "array",
         "query_command": ["id", "identity"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'type_line', 'type': 'string'}],
+        "columns": ["type_line"],
+        "type": "string",
         "query_command": ["t", "type"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': '"set"', 'type': 'string'}, {'name':'set_name', 'type': 'string'}],
+        "columns": ["set", "set_name"],
+        "type": "string",
         "query_command": ["e", "edition", "s", "set"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'rarity', 'type': 'string'}],
+        #TODO: needs to have 3 operator: :/=, >=, < xd
+        "columns": ["rarity"],
+        "type": "string",
         "query_command": ["r", "rarity"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'cmc', 'type': 'float'}],
+        "columns": ["cmc"],
+        "type": "float",
         "query_command": ["cmc", "mv", "manavalue"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'oracle_text', 'type': 'string'}],
+        "columns": ["oracle_text"],
+        "type": "string",
         "query_command": ["o", "oracle"]
     },
 
     {
-        "table_name": "prices",
-        "table_type": "object",
-        "columns": [{'name': 'usd', 'type': 'float'}, {'name':'eur', 'type': 'float'}, {'name':'tix', 'type': 'float'}],
+        "columns": ["prices"],
+        "type": "object",
         "query_command": ["eur", "usd", "tix"]
     },
 
     {
-        "table_name": "games",
-        "table_type": "array",
-        "query_command": ["game"]
+        "columns": ["games"],
+        "type": "array",
+        "query_command": ["game", "games"]
     },
 
     {
-        "table_name": "keywords",
-        "table_type": "array",
+        "columns": ["keywords"],
+        "type": "array",
         "query_command": ["keyword"]
     },
 
     {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'released_at', 'type': 'datetime'}],
+        "columns": ["released_at"],
+        "type": "datetime",
         "query_command": ["date", "year"]
     },
-
-    {
-        "table_name": "main",
-        "table_type": "main",
-        "columns": [{'name': 'name', 'type': 'string'}],
-        "query_command": ["n", "name"]
-    }
 
 ]
 
 
-# In[2]:
+# In[51]:
 
 
-def decide_operator(query_string):
+def decide_operator(query_string:str) -> str:
     operator = ""
     if ">=" in query_string:
         operator = ">="
@@ -103,14 +90,16 @@ def decide_operator(query_string):
         operator = "<"
     elif ":" in query_string:
         operator = ":"
+    elif "=" in query_string:
+        operator = "="
 
     return operator
 
 
-# In[11]:
+# In[8]:
 
 
-def split_query(query_string):
+def split_query(query_string:str) -> list:
     result = []
     separators = [" ", ";"]
     flag = False
@@ -129,60 +118,84 @@ def split_query(query_string):
     return result
 
 
-# In[4]:
+# In[9]:
 
 
-def handle_query_when_array(table, column, value, command, operator):
-    query = ""
-    value = value.replace('"',"")
-    elements_included = " AND ".join([f"{table}.{column} LIKE '%{char}%'" for char in value])
-    match operator:
-        case ">=" | ":":
-            length = ""
-            query = f"""{elements_included}"""
-        case ">":
-            length = f'length({table}.{column}) > {len(value) + (len(value)-1)}'
-            query = f"""{length} AND {elements_included}"""
-        case "=":
-            length = f'length({table}.{column}) = {len(value) + (len(value)-1)}'
-            query = f"""{length} AND {elements_included}"""
-        case "<":
-            length = f'length({table}.{column}) < {len(value) + (len(value)-1)}'
-            query = f"""{length} AND ({" OR ".join([f"{table}.{column} LIKE '%{char}%'" for char in value])} OR length({table}.{column}) = 0)"""
-        case "<=":
-            length = f'length({table}.{column}) = {len(value) + (len(value)-1)}'
-            query = f"""{" OR ".join([f"(length({table}.{column}) = 1 and instr({table}.{column}, '{char.upper()}') = 1)" for char in value])} OR (length({table}.{column}) = 0) OR ({length} AND {elements_included}"""[:-5]+") AND "
-
-    return f"NOT ({query})" if command.find('-') > -1 else query
-
-
-# In[3]:
-
-
-def handle_query_when_number(table, operator, column, value, value_type):
+def handle_query_when_number(table:str, operator:str, column:str, value:str, value_type:str) -> str:
     if value_type == "float":
         correct_value = float(value)
     elif value_type == "int":
         correct_value = int(value)
     
     correct_operator = operator if operator != ":" else "="
-    query = f"{table}.{column} {operator} {str(correct_value)}"
+    query = f"{table}.{column} {correct_operator} {str(correct_value)}"
     return query
 
 
-# In[5]:
+# In[10]:
 
 
-def handle_query_when_string(table, column, value, command, operator):
+def handle_query_when_string(table:str, column:str, value:str, command:str, operator:str) -> str:
     value = value.replace('"',"")
     query = f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'"
     return query
 
 
-# In[6]:
+# In[11]:
 
 
-def handle_query_when_date(table, operator, column, value, command):
+def handle_query_when_string_multiple_columns(table:str, columns:str, value:str, command:str) -> str:
+    # "set" LIKE 'dom' OR set_name LIKE 'dom'
+    value = value.replace('"',"")
+    query = " OR ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '{value}'" for column in columns])
+    return query
+
+
+# In[12]:
+
+
+def handle_query_when_string_array(table:str, column:str, value:str, command:str, operator:str) -> str:
+    values = value.replace('"',"").split(",")
+    query = " AND ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'" for value in values])
+    return query
+
+
+# In[41]:
+
+
+def handle_query_when_color_array(table:str, column:str, value:str, command:str, operator: str):
+    query = ""
+    value = value.replace('"',"")
+    elements_included = " AND ".join([f"{table}.{column} LIKE '%{char}%'" for char in value])
+    length = f"""json_array_length(json(replace({table}.{column}, "'", '"')))"""
+    match operator:
+        case ">=" | ":":
+            query = f"""{elements_included}"""
+        case ">" | "=":
+            query = f"""{length} {operator} {len(value)} AND {elements_included}"""
+        case "<":
+            query = f"""{length} < {len(value)} AND ({" OR ".join([f"{table}.{column} LIKE '%{char}%'" for char in value])} OR {length} = 0)"""
+        case "<=":
+            extract = f"""json_extract(json(replace({table}.{column}, "'", '"')), '$[0]')"""
+            query = f"""{" OR ".join([f"({length} = 1 and {extract} = '{char.upper()}')" for char in value])} OR ({length} = 0) OR ({length} = {len(value)} AND {elements_included})"""
+
+    return f"NOT ({query})" if command.find('-') > -1 else query
+
+
+# In[64]:
+
+
+def handle_query_when_object_prices(table:str, column:str, value:str, command:str, operator:str) -> str:
+    value = value.replace('"',"")
+    correct_operator = operator if operator != ":" else "="
+    query = f"""IIF(cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}') as float) is not null, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}') as float) {correct_operator} {value}, iif(cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_foil') as float) is not null, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_foil') as float) {correct_operator} {value}, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_etched') as float) {correct_operator} {value}))"""
+    return query
+
+
+# In[16]:
+
+
+def handle_query_when_date(table:str, operator:str, column:str, value:str, command:str) -> str:
     value = value.replace('"',"")
     query = ""
     correct_operator = operator if operator != ":" else "="
@@ -193,55 +206,30 @@ def handle_query_when_date(table, operator, column, value, command):
     return query
 
 
-# In[7]:
+# In[17]:
 
 
-def handle_query_when_prices(operator, column, value):
-    value = float(value)
-    correct_operator = operator if operator != ":" else "="
-    query = f"cast(prices.{column} as float) {correct_operator} {str(value)}"
-    return query
+def construct_like_value(table_name:str, column_name:str, words:str) -> str:
+    like_value = " AND ".join([f"{table_name}.{column_name} LIKE '%{word}%'" for word in words])
+    return like_value
 
 
-# In[8]:
+# In[18]:
 
 
-def handle_query_when_multiple_columns(table, columns, value):
-    # "set" LIKE 'dom' OR set_name LIKE 'dom'
-    query = " OR ".join([f"{table}.{column} LIKE '{value}'" for column in columns])
-    return query
-
-
-# In[9]:
-
-
-def handle_query_when_format(operator, column, value):
-    correct_operator = operator if operator != ":" else "="
-    query = f""
+def handle_query_when_no_operator(table_name:str, default_columns:list, value:str) -> str:
+    words = value.split(" ")
+    query = " OR ".join([f"({construct_like_value(table_name, column, words)})" for column in default_columns])
     return query
 
 
 # In[49]:
 
 
-def construct_like_value(table_name, column_name, words):
-    like_value = " AND ".join([f"{table_name}.{column_name} LIKE '%{word}%'" for word in words])
-    return like_value
-
-
-# In[57]:
-
-
-def handle_query_when_no_operator(value):
-    words = value.split(" ")
-    query = f"({construct_like_value('main', 'name', words)}) OR ({construct_like_value('main', 'type_line', words)}) OR ({construct_like_value('main', 'oracle_text', words)})"
-    return query
-
-
-# In[20]:
-
-
-def construct_query_when(query_string):
+def construct_query_when(query_string:str) -> str:
+    table_name = get_database_table_name()
+    #FIXME: add below to globals
+    default_columns = ['name', 'type_line', 'oracle_text'] # columns that will be searched when there was no argument provided
     query_array = []
     query_elements = split_query(query_string)
 
@@ -250,7 +238,7 @@ def construct_query_when(query_string):
         try:
             element_array = element.split(operator)
         except ValueError:
-            query = handle_query_when_no_operator(query_string)
+            query = handle_query_when_no_operator(table_name, default_columns, query_string)
             return f"WHERE {query}"
             
         argument = element_array[0]
@@ -258,80 +246,56 @@ def construct_query_when(query_string):
      
         for translation in QUERY_TRANSLATE:
             translation_commands = translation["query_command"]
-            translation_commands_negative = [f"-{element}" for element in translation_commands]
+            translation_commands_negative = [f"-{element}" for element in translation_commands] #commands found in translation dictionary, but negated
             if argument in translation_commands or argument in translation_commands_negative:
-                table_name = translation["table_name"]
-                if translation["table_type"] == "main":
+                column_type = translation["type"]
+
+                if column_type not in ["array", "object"]:
                     if len(translation["columns"]) == 1:
-                        column = translation["columns"][0]
-                        column_name = column["name"]
-                        column_type = column["type"]
-                        
-                        if column_type in ['float', 'int']:
+                        column_name = translation["columns"][0]
+                        if column_type in ["float", "int"]:
                             query = handle_query_when_number(table_name, operator, column_name, value, column_type)
                             query_array.append(query)
-                        elif column_type in ['datetime']:
+                        elif column_type in ["datetime"]:
                             query = handle_query_when_date(table_name, operator, column_name, value, argument)
                             query_array.append(query)
                         else:
                             query = handle_query_when_string(table_name, column_name, value, argument, operator)
                             query_array.append(query)
                     else:
-                        column_list = list(map(lambda ele: ele['name'], translation["columns"]))
-                        query = handle_query_when_multiple_columns(table_name, column_list, value)
-                        query_array.append(query)
-
-                elif translation["table_type"] == "array":
-                    query = handle_query_when_array(table_name,'array_value', value, argument, operator)
-                    query_array.append(query)
-
-                elif translation["table_type"] == "object":
-                    match table_name:
-                        case "prices":
-                            query = handle_query_when_prices(operator, argument, value)
+                        if column_type in ["float", "int"]:
+                            #TODO: there is no use case right now; might be added later in the development
+                            pass
+                        elif column_type in ["datetime"]:
+                            #TODO: there is no use case right now; might be added later in the development
+                            pass
+                        else:
+                            query = handle_query_when_string_multiple_columns(table_name, translation["columns"], value, argument)
                             query_array.append(query)
 
-    return f"WHERE {' AND '.join(query_array)}"
+                else:
+                    column_name = translation["columns"][0]
+                    if column_type == "array":
+                        if "color" in ",".join(translation["columns"]):
+                            query = handle_query_when_color_array(table_name, column_name, value, argument, operator)
+                            query_array.append(query)
+                        else:
+                            query = handle_query_when_string_array(table_name, column_name, value, argument, operator)
+                            query_array.append(query)
+                    elif column_type == "object":
+                        if "prices" in translation["columns"]:
+                            query = handle_query_when_object_prices(table_name, column_name, value, argument, operator)
+                            query_array.append(query)   
+
+    return f"WHERE {' AND '.join(query_array)}" if query_array else ""
 
 
-# In[10]:
-
-
-def construct_query_join(table_name):
-    join_query = f"""INNER JOIN {table_name}_table as {table_name} ON main.id = {table_name}.card_id """
-    return join_query
-
-
-# In[72]:
+# In[20]:
 
 
 def construct_query(query_string=None):
-    query = 'SELECT id FROM main_table main '
-    if not query_string:
-        return query
-    try:
-        query_commands = list(set([element.split(decide_operator(element))[0] for element in split_query(query_string)]))
-    except ValueError:
-        query_commands = []
-
-    tables_to_include = []
-    if query_commands: # default case will be empty array
-        for element in query_commands:
-            for record in QUERY_TRANSLATE:
-                if element in record['query_command'] and record['table_type'] != "main":
-                    tables_to_include.append(record['table_name'])
-
-        for table in tables_to_include:
-            join_query = construct_query_join(table)
-            query += join_query
+    table_name = get_database_table_name()
+    query = f'SELECT id FROM {table_name} '
 
     query += construct_query_when(query_string)
-
     return query
-
-
-# In[73]:
-
-
-query_string = 'year>2010 c>gw cmc>5 eur>=10'
-construct_query(query_string)

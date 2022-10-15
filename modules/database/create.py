@@ -47,6 +47,12 @@ def create_database_main_table(connection: Connection) -> None:
     console_log('info', f"Creating {get_database_table_name()} in database")
     main_column_names_and_types = get_column_names_and_types()
 
+    query = f'DROP TABLE {get_database_table_name()}'
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
+
     query = f'CREATE TABLE IF NOT EXISTS {get_database_table_name()} (\nid TEXT NOT NULL PRIMARY KEY,'
 
     for element in main_column_names_and_types:
