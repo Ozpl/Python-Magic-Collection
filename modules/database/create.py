@@ -1,5 +1,5 @@
 from json import load
-from sqlite3 import Connection
+from sqlite3 import Connection, OperationalError
 from re import compile
 from typing import Any
 from modules.globals import config
@@ -50,9 +50,13 @@ def create_database_main_table(connection: Connection) -> None:
     query = f'DROP TABLE {get_database_table_name()}'
 
     cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
-
+    # Execute will fail if the table specified does not exist
+    try:
+        cursor.execute(query)
+        connection.commit()
+    except OperationalError:
+        pass
+    
     query = f'CREATE TABLE IF NOT EXISTS {get_database_table_name()} (\nid TEXT NOT NULL PRIMARY KEY,'
 
     for element in main_column_names_and_types:

@@ -3,7 +3,7 @@ from modules.api import get_data_from_scryfall
 from modules.globals import config
 from modules.database.create import create_database_main_table
 from modules.database.load import database_load
-from modules.database.database_functions import create_connection
+from modules.database.database_functions import create_connection, close_all_connections
 from modules.database.collections import create_collections_list, create_collection
 from modules.ui import create_user_interface
 
@@ -17,6 +17,7 @@ get_data_from_scryfall()
 
 #Manage cards database
 database_connection = create_connection(config.get('FILE', 'database'))
+# FIXME: Cloning and starting the program from scratch will fail, because flags are always set to False. Needs further investigating, for now idc. :) ~Dawid
 if config.get_boolean('FLAG', 'database_was_created') or config.get_boolean('FLAG', 'downloaded_from_scryfall'):
     create_database_main_table(database_connection)
     database_load(database_connection)
@@ -36,6 +37,4 @@ decks_connection = create_connection(config.get('FILE', 'decks'))
 create_user_interface(database_connection, collections_connection, decks_connection)
 
 #Close all .db connections
-database_connection.close()
-collections_connection.close()
-decks_connection.close()
+close_all_connections(database_connection, collections_connection, decks_connection)
