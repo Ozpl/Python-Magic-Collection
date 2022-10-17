@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+# coding: utf-8
+
 from modules.database.database_functions import get_database_table_name
 
+# In[6]:
 QUERY_TRANSLATE = [
     {
         "columns": ["colors"],
@@ -71,6 +75,9 @@ QUERY_TRANSLATE = [
 ]
 
 
+# In[51]:
+
+
 def decide_operator(query_string:str) -> str:
     operator = ""
     if ">=" in query_string:
@@ -87,6 +94,9 @@ def decide_operator(query_string:str) -> str:
         operator = "="
 
     return operator
+
+
+# In[8]:
 
 
 def split_query(query_string:str) -> list:
@@ -108,6 +118,9 @@ def split_query(query_string:str) -> list:
     return result
 
 
+# In[9]:
+
+
 def handle_query_when_number(table:str, operator:str, column:str, value:str, value_type:str) -> str:
     if value_type == "float":
         correct_value = float(value)
@@ -119,10 +132,16 @@ def handle_query_when_number(table:str, operator:str, column:str, value:str, val
     return query
 
 
+# In[10]:
+
+
 def handle_query_when_string(table:str, column:str, value:str, command:str, operator:str) -> str:
     value = value.replace('"',"")
     query = f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'"
     return query
+
+
+# In[11]:
 
 
 def handle_query_when_string_multiple_columns(table:str, columns:str, value:str, command:str) -> str:
@@ -132,10 +151,16 @@ def handle_query_when_string_multiple_columns(table:str, columns:str, value:str,
     return query
 
 
+# In[12]:
+
+
 def handle_query_when_string_array(table:str, column:str, value:str, command:str, operator:str) -> str:
     values = value.replace('"',"").split(",")
     query = " AND ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'" for value in values])
     return query
+
+
+# In[41]:
 
 
 def handle_query_when_color_array(table:str, column:str, value:str, command:str, operator: str):
@@ -157,11 +182,17 @@ def handle_query_when_color_array(table:str, column:str, value:str, command:str,
     return f"NOT ({query})" if command.find('-') > -1 else query
 
 
+# In[64]:
+
+
 def handle_query_when_object_prices(table:str, column:str, value:str, command:str, operator:str) -> str:
     value = value.replace('"',"")
     correct_operator = operator if operator != ":" else "="
     query = f"""IIF(cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}') as float) is not null, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}') as float) {correct_operator} {value}, iif(cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_foil') as float) is not null, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_foil') as float) {correct_operator} {value}, cast(json_extract(json(replace(replace(prices, "'", '"'), "None", "null")), '$.{command}_etched') as float) {correct_operator} {value}))"""
     return query
+
+
+# In[16]:
 
 
 def handle_query_when_date(table:str, operator:str, column:str, value:str, command:str) -> str:
@@ -175,15 +206,24 @@ def handle_query_when_date(table:str, operator:str, column:str, value:str, comma
     return query
 
 
+# In[17]:
+
+
 def construct_like_value(table_name:str, column_name:str, words:str) -> str:
     like_value = " AND ".join([f"{table_name}.{column_name} LIKE '%{word}%'" for word in words])
     return like_value
+
+
+# In[18]:
 
 
 def handle_query_when_no_operator(table_name:str, default_columns:list, value:str) -> str:
     words = value.split(" ")
     query = " OR ".join([f"({construct_like_value(table_name, column, words)})" for column in default_columns])
     return query
+
+
+# In[49]:
 
 
 def construct_query_when(query_string:str) -> str:
@@ -248,6 +288,9 @@ def construct_query_when(query_string:str) -> str:
                             query_array.append(query)   
 
     return f"WHERE {' AND '.join(query_array)}" if query_array else ""
+
+
+# In[20]:
 
 
 def construct_query(query_string=None):

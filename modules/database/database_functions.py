@@ -128,7 +128,3 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
     card_ids = [element[0] for element in record]
 
     return card_ids
-
-def close_all_connections(*connections: Connection) -> None:
-    for connection in connections:
-        connection.close()
