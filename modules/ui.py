@@ -1,4 +1,5 @@
 from ast import literal_eval
+import enum
 from os import path
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
@@ -11,16 +12,12 @@ from modules.database.collections import add_card_to_collection, create_collecti
 from modules.globals import config
 from modules.logging import console_log
 
-if path.exists('config.ini'):
-    if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
-    else: image_extension = 'jpg'
-
 app = QApplication([])
 app_lyt = QVBoxLayout()
 tab_bar = QTabWidget()
 
 #FIXME remove ids
-filtered_cards = ['0000579f-7b35-4ed3-b44c-db2a538066fe', '0005968a-8708-441b-b9a1-9373aeb8114d', '000d609c-deb7-4bd7-9c1d-e20fb3ed4f5f', '00154b70-57d2-4c32-860f-1c36fc49b10c', '001cc57e-f3fc-4790-a9e5-171b2e3e8739']
+filtered_cards = ['0000579f-7b35-4ed3-b44c-db2a538066fe', '0005968a-8708-441b-b9a1-9373aeb8114d', '000d609c-deb7-4bd7-9c1d-e20fb3ed4f5f', '00154b70-57d2-4c32-860f-1c36fc49b10c', '001cc57e-f3fc-4790-a9e5-171b2e3e8739', '32e94e9b-70f5-4ce0-ac9c-e7d1481263d3', '0000579f-7b35-4ed3-b44c-db2a538066fe', '0005968a-8708-441b-b9a1-9373aeb8114d', '000d609c-deb7-4bd7-9c1d-e20fb3ed4f5f', '00154b70-57d2-4c32-860f-1c36fc49b10c', '001cc57e-f3fc-4790-a9e5-171b2e3e8739', '32e94e9b-70f5-4ce0-ac9c-e7d1481263d3', '0000579f-7b35-4ed3-b44c-db2a538066fe', '0005968a-8708-441b-b9a1-9373aeb8114d', '000d609c-deb7-4bd7-9c1d-e20fb3ed4f5f', '00154b70-57d2-4c32-860f-1c36fc49b10c', '001cc57e-f3fc-4790-a9e5-171b2e3e8739', '32e94e9b-70f5-4ce0-ac9c-e7d1481263d3']
 add_cards_found_cards = []
 
 widget_hierarchy = [
@@ -186,6 +183,11 @@ class UI(QWidget):
     def __init__(self, parent=None) -> None:
         super(UI, self).__init__(parent)
 
+        global image_extension
+        if path.exists('config.ini'):
+            if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
+            else: image_extension = 'jpg'
+
         create_corner_widget()
         create_collection_tab()
         create_decks_tab()
@@ -207,6 +209,7 @@ class UI(QWidget):
     def resizeEvent(self, event) -> None:
         self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
         update_sizes_of_collection_tab()
+        update_sizes_of_cards_in_grid()
         QWidget.resizeEvent(self, event)
 
 #Global functions
@@ -215,7 +218,11 @@ def download_image_if_not_downloaded(id):
 
     if not path.exists(file_name):
         card = get_card_from_db(database_connection, id)
-        image_uris = literal_eval(card['image_uris'])
+        if card['image_uris']:
+            image_uris = literal_eval(card['image_uris'])
+        else:
+            #FIXME Handle card_faces and lack of image_uris
+            return
         r = get(image_uris[config.get('COLLECTION', 'image_type')], stream = True)
         if r.status_code == 200:
             r.raw.decode_content = True
@@ -256,29 +263,29 @@ def create_collection_tab():
     #Hierarchy
     tab_bar.addTab(col, config.get('APP', 'collection'))
     col.setLayout(col_lyt)
-    col_lyt.addChildWidget(col_lyt_crd)
+    col_lyt.addWidget(col_lyt_crd)
     col_lyt_crd.setLayout(col_lyt_crd_lyt)
-    col_lyt_crd_lyt.addChildWidget(col_lyt_crd_lyt_flt)
+    col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_flt)
     col_lyt_crd_lyt_flt.setLayout(col_lyt_crd_lyt_flt_lyt)
-    [col_lyt_crd_lyt_flt_lyt.addChildWidget(element) for element in col_lyt_crd_lyt_flt_lyt_clr]
-    col_lyt_crd_lyt_flt_lyt.addChildWidget(col_lyt_crd_lyt_flt_lyt_and)
-    col_lyt_crd_lyt_flt_lyt.addChildWidget(col_lyt_crd_lyt_flt_lyt_orr)
-    [col_lyt_crd_lyt_flt_lyt.addChildWidget(element) for element in col_lyt_crd_lyt_flt_lyt_cmc]
-    col_lyt_crd_lyt_flt_lyt.addChildWidget(col_lyt_crd_lyt_flt_lyt_slb)
-    col_lyt_crd_lyt_flt_lyt.addChildWidget(col_lyt_crd_lyt_flt_lyt_sbx)
-    col_lyt_crd_lyt_flt_lyt.addChildWidget(col_lyt_crd_lyt_flt_lyt_sbu)
-    col_lyt_crd_lyt.addChildWidget(col_lyt_crd_lyt_tag)
+    [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_clr]
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_and)
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_orr)
+    [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_cmc]
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_slb)
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbx)
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbu)
+    col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_tag)
     col_lyt_crd_lyt_tag.setLayout(col_lyt_crd_lyt_tag_lyt)
-    col_lyt_crd_lyt.addChildWidget(col_lyt_crd_lyt_grd)
+    col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_grd)
     col_lyt_crd_lyt_grd.setLayout(col_lyt_crd_lyt_grd_lyt)
-    col_lyt.addChildWidget(col_lyt_pre)
+    col_lyt.addWidget(col_lyt_pre)
     col_lyt_pre.setLayout(col_lyt_pre_lyt)
-    col_lyt_pre_lyt.addChildWidget(col_lyt_pre_lyt_iml)
+    col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_iml)
     col_lyt_pre_lyt_iml.setPixmap(col_lyt_pre_lyt_iml_pix)
-    col_lyt_pre_lyt.addChildWidget(col_lyt_pre_lyt_inf)
-    col_lyt_pre_lyt.addChildWidget(col_lyt_pre_lyt_des)
+    col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_inf)
+    col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_des)
     col_lyt_pre_lyt_des.setWidget(col_lyt_pre_lyt_des_lbl)
-    col_lyt_pre_lyt.addChildWidget(col_lyt_pre_lyt_tag)
+    col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_tag)
 
     create_collection_tab_filters()
     create_collection_tab_grid()
@@ -300,7 +307,6 @@ def update_sizes_of_collection_tab():
     for element in col_lyt_crd_lyt_flt_lyt_clr: element.setMaximumSize(icon_size, icon_size)
     for element in col_lyt_crd_lyt_flt_lyt_cmc: element.setMaximumSize(icon_size, icon_size)
 
-    create_collection_tab_grid()
     #update_sizes_of_cards_in_grid()
 
 #Collection -> Filters
@@ -334,89 +340,78 @@ def collection_filters_searchbox_pressed():
 def create_collection_tab_grid():
     n_cards = config.get_int('COLLECTION', 'grid_number_of_cards')
     n_rows = config.get_int('COLLECTION', 'grid_number_of_rows')
-    cards_per_row = int(n_cards / n_rows)
+    n_per_row = int(n_cards / n_rows)
     
-    gbx_width = int(col_lyt_crd_lyt_grd.geometry().width() / cards_per_row)
+    gbx_width = int(col_lyt_crd_lyt_grd.geometry().width() / n_per_row)
     gbx_height = int(col_lyt_crd_lyt_grd.geometry().height() / n_rows)
 
-    #Clear all cards in grid
-    for i in reversed(range(col_lyt_crd_lyt_grd_lyt.count())):
-        col_lyt_crd_lyt_grd_lyt.itemAt(i).widget().setParent(None)
-    col_lyt_crd_lyt_grd_lyt_crd.clear()
-    col_lyt_crd_lyt_grd_lyt_crd_lyt.clear()
-    col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl.clear()
-    col_lyt_crd_lyt_grd_lyt_crd_lyt_iml.clear()
-    col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix.clear()
-
     if len(filtered_cards) > 0:
-        for i in range(n_rows):
-            for j in range(cards_per_row):
-                if (cards_per_row * i + j) + 1 <= len(filtered_cards):
-                    card = get_card_from_db(database_connection, filtered_cards[cards_per_row * i + j])
-                    image_uris = literal_eval(card['image_uris'])
-                    [download_image_if_not_downloaded(card['id']) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
+        
+        for id in filtered_cards:
+            card = get_card_from_db(database_connection, id)
+            image_uris = literal_eval(card['image_uris'])
+            [download_image_if_not_downloaded(card['id']) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
 
-                    gbx = QGroupBox()
-                    #gbx.setMaximumWidth(gbx_width)
-                    #gbx.setMaximumHeight(gbx_height)
-                    gbx_lyt = QVBoxLayout()
-                    gbx_lyt.setAlignment(Qt.AlignCenter)
+        for i in range(n_rows*2):
+            for j in range(n_per_row):
+                if i % 2 == 0:
+                    iml = QLabel()
+                    iml.setObjectName('image')
+                    temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{filtered_cards[int(i/2)]}.{image_extension}")
+                    imp = temp.scaled(gbx_height, gbx_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    iml.setPixmap(imp)
+
+                    col_lyt_crd_lyt_grd_lyt.addWidget(iml, i, j)
+                elif i % 2 == 1:
                     lbl = QLabel('Owned: 12/14 (26)')
                     lbl.setAlignment(Qt.AlignCenter)
+                    lbl.setObjectName('info')
                     lbl.setMaximumHeight(50)
-                    iml = QLabel()
-                    iml.setObjectName('Image')
-                    temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{card['id']}.{image_extension}")
-                    imp = temp.scaled(gbx_height-50, gbx_height-50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    iml.setPixmap(imp)
-                    gbx_lyt.addChildWidget(lbl)
-                    gbx_lyt.addChildWidget(iml)
-                    gbx.setLayout(gbx_lyt)
-                    gbx_lyt.setParent(gbx)
-                    #col_lyt_crd_lyt_grd_lyt.addWidget(gbx, i, j)
-                    col_lyt_crd_lyt_grd_lyt.addChildWidget(gbx)
-                    col_lyt_crd_lyt_grd_lyt_crd.append(gbx)
-                    col_lyt_crd_lyt_grd_lyt_crd_lyt.append(gbx_lyt)
-                    col_lyt_crd_lyt_grd_lyt_crd_lyt_lbl.append(lbl)
-                    col_lyt_crd_lyt_grd_lyt_crd_lyt_iml.append(iml)
-                    col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix.append(temp)
-                else:
-                    gbx = QGroupBox()
-                    gbx.setMaximumWidth(gbx_width)
-                    gbx.setMaximumHeight(gbx_height)
-                    gbx_lyt = QVBoxLayout()
-                    gbx.setLayout(gbx_lyt)
-                    col_lyt_crd_lyt_grd_lyt.addWidget(gbx, i, j)
-                    #col_lyt_crd_lyt_grd_lyt.addChildWidget(gbx)
-                    col_lyt_crd_lyt_grd_lyt_crd.append(gbx)
-                    col_lyt_crd_lyt_grd_lyt_crd_lyt.append(gbx_lyt)
+            
+                    col_lyt_crd_lyt_grd_lyt.addWidget(lbl, i, j)
 #Collection -> Grid -> Events
 def update_sizes_of_cards_in_grid():
+    row_count = col_lyt_crd_lyt_grd_lyt.rowCount()
+    col_count = col_lyt_crd_lyt_grd_lyt.columnCount()
     n_cards = config.get_int('COLLECTION', 'grid_number_of_cards')
     n_rows = config.get_int('COLLECTION', 'grid_number_of_rows')
-    cards_per_row = int(n_cards / n_rows)
+    n_per_row = int(n_cards / n_rows)
 
-    gbx_height = int(col_lyt_crd_lyt_grd_lyt.itemAtPosition(0,0).geometry().height() / n_rows)
+    info_label = col_lyt_crd_lyt_grd.findChild(QLabel, 'info')
 
-    results = col_lyt_crd_lyt_grd_lyt.findChildren(QVBoxLayout)
+    w = int(col_lyt_crd_lyt_grd.geometry().width() * 0.92 / n_per_row)
+    h = int(col_lyt_crd_lyt_grd.geometry().height() * 0.92 / n_rows) - info_label.geometry().height()
+
+    children = col_lyt_crd_lyt_grd.findChildren(QLabel, 'image')
+
+    for i, child in enumerate(children):
+        pix = QPixmap(f"{config.get('FOLDER', 'cards')}/{filtered_cards[i]}.{image_extension}")
+        pix_scaled = pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        child.setPixmap(pix_scaled)
 
     '''
-    for i, row in enumerate(range(col_lyt_crd_lyt_grd_lyt.rowCount())):
-        for j, column in enumerate(range(col_lyt_crd_lyt_grd_lyt.columnCount())):
-            current_index = (cards_per_row * i + j)
-            item = col_lyt_crd_lyt_grd_lyt.itemAtPosition(row, column)
-            if item is not None:
-                groupbox = item.widget()
-                groupbox_layout = groupbox.layout()
-                for position in range(groupbox_layout.count()):
-                    item = groupbox_layout.itemAt(position)
-                    if item is not None:
-                        if position == 1:
-                            pix = col_lyt_crd_lyt_grd_lyt_crd_lyt_iml_pix[current_index].scaled(gbx_height-50, gbx_height-50, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                            image = QLabel()
-                            image.setPixmap(pix)
-                            groupbox_layout.insertItem(position, image)
-                            '''
+    for i, row in enumerate(range(row_count)):
+        for j, col in enumerate(range(col_count)):
+            pass
+            current_groupbox = col_lyt_crd_lyt_grd_lyt.itemAtPosition(row, col).widget()
+            info_label = current_groupbox.findChild(QLabel, 'info')
+            w = int(current_groupbox.geometry().width()* 0.50)
+            h = int(current_groupbox.geometry().height() - info_label.geometry().height() * 0.70)
+            #current_groupbox.setGeometry()
+            child_image = current_groupbox.findChild(QLabel, 'image')
+            if child_image is not None:
+                pix = QPixmap(f"{config.get('FOLDER', 'cards')}/{filtered_cards[n_per_row * i + j]}.{image_extension}")
+                pix_scaled = pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                child_image.setPixmap(pix_scaled)
+    '''
+    '''
+            image = col_lyt_crd_lyt_grd_lyt.itemAtPosition(row, col).widget()
+            if image is not None:
+                pix = QPixmap(f"{config.get('FOLDER', 'cards')}/{filtered_cards[n_per_row * i + j]}.{image_extension}")
+                pix_scaled = pix.scaled(w, h, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                image.setPixmap(pix_scaled)
+    '''
+
 #Collection -> Preview
 def create_collection_tab_preview():
     col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
@@ -465,15 +460,13 @@ def add_cards_search_button_pressed():
         unsorted_list.append({
             'id': card['id'],
             'name': card['name'],
-            'set_name': card['set_name'],
             'collector_number': card['collector_number'],
             'released_at': card['released_at'],
-            'sort_key': f"{str(int(card['cmc']))}{card['name'].lower()}",
             'display': f"{card['name']} ({card['collector_number']}) [{card['set_name']}] - {card['released_at']}"
             })
         download_image_if_not_downloaded(element)
 
-    add_cards_sorted_list = sorted(unsorted_list, key=lambda d: d['released_at'])
+    add_cards_sorted_list = sorted(unsorted_list, key=lambda d: (d['name'], d['released_at'], d['collector_number']))
     add_cards_found_cards = list(map(lambda d: d['id'], add_cards_sorted_list))
 
     add_lyt_gbx_lyt_lst.addItems(list(map(lambda d: d['display'], add_cards_sorted_list)))

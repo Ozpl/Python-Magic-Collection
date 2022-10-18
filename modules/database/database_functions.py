@@ -11,7 +11,11 @@ def create_connection(db_path: str) -> Connection:
     except Error as e:
         print(e)
 
-def prepare_records_for_transaction(card: dict, main: list) -> None:
+def close_all_connections(*connections: Connection) -> None:
+    for connection in connections:
+        connection.close()
+
+def prepare_records_for_load_transaction(card: dict, main: list) -> None:
     '''This function appends given list with tuples, each containing card's properties designated to be stored in main table.'''
     to_main = []
 

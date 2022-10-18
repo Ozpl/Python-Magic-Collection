@@ -4,19 +4,19 @@ from sqlite3 import Connection
 from tqdm import tqdm
 from modules.globals import DATABASE_INSERT_TO_MAIN
 from modules.globals import config
-from modules.database.database_functions import get_database_table_name, prepare_records_for_transaction
+from modules.database.database_functions import get_database_table_name, prepare_records_for_load_transaction
 from modules.logging import console_log
 
-def database_load(connection: Connection) -> None:    
-    with open(f"./{config.get('FOLDER', 'downloads')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
-        console_log('info', 'Alpha load started')
+def database_load(connection: Connection) -> None:
+    with open(f"./{config.get('FOLDER', 'database')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
+        console_log('info', 'Loading has started')
         data = load(f)
         console_log('info', 'Successfully loaded .json file')
 
         transaction = []
         
         for card in tqdm(data):
-            prepare_records_for_transaction(card, transaction)
+            prepare_records_for_load_transaction(card, transaction)
 
         #Main
         column_names = ['id', *DATABASE_INSERT_TO_MAIN, 'sort_key']
@@ -31,9 +31,10 @@ def database_load(connection: Connection) -> None:
         cur.executemany(query, transaction)
         connection.commit()
 
-        console_log('info', f'Alpha load done, added {len(data)} cards')
+        console_log('info', f'Loading is done, added {len(data)} cards')
 
-    for file in listdir(config.get('FOLDER', 'downloads')):
-        f = path.join(config.get('FOLDER', 'downloads'), file)
-        if path.isfile(f):
-            remove(f)
+    for file in listdir(config.get('FOLDER', 'database')):
+        f = path.join(config.get('FOLDER', 'database'), file)
+        if path.isfile(f): 
+            if ".json" in f:
+                remove(f)

@@ -1,10 +1,10 @@
 from os import path
 from modules.api import get_data_from_scryfall
 from modules.globals import config
-from modules.database.create import create_database_main_table
-from modules.database.load import database_load
-from modules.database.database_functions import create_connection
 from modules.database.collections import create_collections_list, create_collection
+from modules.database.create import create_database_main_table
+from modules.database.database_functions import create_connection, close_all_connections
+from modules.database.load import database_load
 from modules.ui import create_user_interface
 
 #Initiate configuration
@@ -36,6 +36,4 @@ decks_connection = create_connection(config.get('FILE', 'decks'))
 create_user_interface(database_connection, collections_connection, decks_connection)
 
 #Close all .db connections
-database_connection.close()
-collections_connection.close()
-decks_connection.close()
+close_all_connections(database_connection, collections_connection, decks_connection)

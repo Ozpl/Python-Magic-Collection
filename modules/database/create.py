@@ -1,5 +1,5 @@
 from json import load
-from sqlite3 import Connection
+from sqlite3 import Connection, OperationalError
 from re import compile
 from typing import Any
 from modules.globals import config
@@ -29,7 +29,7 @@ def assign_data_type(element: Any) -> str:
     return data_type
 
 def get_column_names_and_types() -> dict:
-    with open(f"./{config.get('FOLDER', 'downloads')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
+    with open(f"./{config.get('FOLDER', 'database')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
         j = load(f)
         names_and_types = {}
         for card in j:
@@ -50,8 +50,10 @@ def create_database_main_table(connection: Connection) -> None:
     query = f'DROP TABLE {get_database_table_name()}'
 
     cursor = connection.cursor()
-    cursor.execute(query)
-    connection.commit()
+    try:
+        cursor.execute(query)
+        connection.commit()
+    except OperationalError: pass
 
     query = f'CREATE TABLE IF NOT EXISTS {get_database_table_name()} (\nid TEXT NOT NULL PRIMARY KEY,'
 

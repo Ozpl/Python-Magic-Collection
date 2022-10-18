@@ -4,11 +4,11 @@ from os import mkdir, path
 
 class Config:
     '''Class which stores all settable variables as strings in .ini file using ConfigParser library. Use 'set_value' and 'get_x', where x can be 'bool', 'int', 'float' or 'value'.'''
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_parser = ConfigParser()
         self.load()
 
-    def create_default_config_file(self):
+    def create_default_config_file(self) -> None:
         self.config_parser['DEFAULT'] = {}
         self.config_parser['FLAG'] = {
             'downloaded_from_scryfall': 'false',
@@ -20,7 +20,6 @@ class Config:
             'collections': 'collections',
             'database': 'database',
             'decks': 'decks',
-            'downloads': 'downloads',
             'images': 'images',
             'cards': 'images/cards',
             'symbols': 'images/symbols',
@@ -62,13 +61,13 @@ class Config:
         self.save()
         self.load()
 
-    def save(self):
+    def save(self) -> None:
         with open(f'config.ini', 'w') as f: self.config_parser.write(f)
 
-    def load(self):
+    def load(self) -> None:
         self.config_parser.read(f'config.ini')
 
-    def get_boolean(self, section: str, option:str) -> bool:
+    def get_boolean(self, section: str, option: str) -> bool:
         self.load()
         return self.config_parser.getboolean(section.upper(), option.lower())
 
