@@ -1,3 +1,4 @@
+from ast import literal_eval
 from sqlite3 import connect, Connection, Error
 from modules.globals import config
 from modules.globals import DATABASE_INSERT_TO_MAIN
@@ -101,6 +102,8 @@ def format_card_values(element: list) -> list:
     for x in element:
         if isinstance(x, int):
             result.append(str(x))
+        elif x is None:
+            result.append(None)
         else:
             result.append(f'{x}')
     return result
@@ -121,6 +124,14 @@ def get_card_from_db(connection: Connection, card_id: str) -> dict:
     record = cursor.fetchone()
 
     card = {column_names[i]: element for i, element in enumerate(record)}
+
+    #{card[key]: literal_eval(card[key]) for key in card.keys()}
+
+    for key in card.keys():
+        if card[key]:
+            if isinstance(card[key], str):
+                if card[key][0] in ["{", "["] and card[key][1] in "'":
+                    card[key] = literal_eval(card[key])
 
     return card
 

@@ -28,13 +28,21 @@ def create_ui():
             groupbox_layout = QVBoxLayout()
 
             label = QLabel()
-            label.setText(f"label: x:{groupbox.geometry().width()}, y:{groupbox.geometry().height()}")
+            label.setText(f"starting size: x:{groupbox.geometry().width()}, y:{groupbox.geometry().height()}")
             label.setObjectName('label')
-            image_label = QLabel()
-            image_label.setText(f"before: x:{i}, y:{j}")
-            image_label.setObjectName('image')
+            frame = QLabel()
+            frame.setText(f"frame: x:{groupbox.frameGeometry().width()}, y:{groupbox.frameGeometry().height()}")
+            frame.setObjectName('frame')
+            geometry = QLabel()
+            geometry.setText(f"geometry: x:{groupbox.geometry().width()}, y:{groupbox.geometry().height()}")
+            geometry.setObjectName('geometry')
+            size_hint = QLabel()
+            size_hint.setText(f"size_hint: x:{groupbox.sizeHint().width()}, y:{groupbox.sizeHint().height()}")
+            size_hint.setObjectName('size_hint')
             groupbox_layout.addWidget(label)
-            groupbox_layout.addWidget(image_label)
+            groupbox_layout.addWidget(frame)
+            groupbox_layout.addWidget(geometry)
+            groupbox_layout.addWidget(size_hint)
             
             groupbox.setLayout(groupbox_layout)
             groupbox_layout.setParent(groupbox)
@@ -50,8 +58,12 @@ def resize_ui():
             if app_layout.count() != 0:
                 current_groupbox = app_layout.itemAtPosition(row, col).widget()
                 #children.append(current_groupbox.findChildren(QLabel, 'image'))
-                for child in current_groupbox.findChildren(QLabel, 'image'):
-                    child.setText(f"resized: x:{current_groupbox.geometry().width()}, y:{current_groupbox.geometry().height()}")
+                for child in current_groupbox.findChildren(QLabel, 'frame'):
+                    child.setText(f"frame: x:{current_groupbox.frameGeometry().width()}, y:{current_groupbox.frameGeometry().height()}")
+                for child in current_groupbox.findChildren(QLabel, 'geometry'):
+                    child.setText(f"geometry: x:{current_groupbox.geometry().width()}, y:{current_groupbox.geometry().height()}")
+                for child in current_groupbox.findChildren(QLabel, 'size_hint'):
+                    child.setText(f"size_hint: x:{child.sizeHint().width()}, y:{child.sizeHint().height()}")
     #print(children)
 
 class UI(QWidget):

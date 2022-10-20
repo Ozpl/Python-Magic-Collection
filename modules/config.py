@@ -56,7 +56,8 @@ class Config:
             'grid_number_of_cards': '18',
             'grid_number_of_rows': '3',
             'current_page': '1',
-            'current_collection': 'maincollection'
+            'current_collection': 'maincollection',
+            'show_database': 'false'
         }
         self.save()
         self.load()

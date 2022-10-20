@@ -7,8 +7,8 @@ from modules.database.database_functions import format_card_values, query_get_ta
 def create_collections_list(connection: Connection) -> None:
     query = '''CREATE TABLE IF NOT EXISTS collection_list (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name VARCHAR(255),
-        formatted_name VARCHAR(255))
+        name TEXT,
+        formatted_name TEXT)
         '''
 
     cursor = connection.cursor()
@@ -37,10 +37,11 @@ def create_collection(connection: Connection, name: str) -> None:
         
         query = f'''
         CREATE TABLE IF NOT EXISTS {formatted_name} (
-                card_id VARCHAR(255) NOT NULL PRIMARY KEY,
+                id TEXT NOT NULL PRIMARY KEY,
                 regular INT,
                 foil INT,
-                tags VARCHAR(255)
+                tags TEXT,
+                sort_key TEXT
                 )'''
                 
         cursor = connection.cursor()
@@ -65,7 +66,7 @@ def get_all_collections_names_as_array(connection: Connection) -> list:
     return collection_names
 
 def get_card_ids_from_collection(connection: Connection, collection_name: str) -> list:
-    query = f"SELECT card_id FROM {collection_name}"
+    query = f"SELECT id FROM {collection_name} ORDER BY sort_key"
 
     cursor = connection.cursor()
     cursor.execute(query)
@@ -73,12 +74,12 @@ def get_card_ids_from_collection(connection: Connection, collection_name: str) -
     record = cursor.fetchall()
 
     card_ids = [element[0] for element in record]
-    card_ids.sort()
+    #card_ids.sort()
 
     return card_ids
 
 def get_card_from_collection(connection: Connection, collection_name: str, id: str) -> dict:
-    query = f"SELECT * FROM {collection_name} WHERE card_id = '{id}'"
+    query = f"SELECT * FROM {collection_name} WHERE id = '{id}'"
 
     cursor = connection.cursor()
     cursor.execute(query)
@@ -86,13 +87,13 @@ def get_card_from_collection(connection: Connection, collection_name: str, id: s
     record = cursor.fetchone()
 
     if record:
-        return {'card_id': record[0], 'regular': record[1], 'foil': record[2], 'tags': record[3], 'sort_key': record[4]}
+        return {'id': record[0], 'regular': record[1], 'foil': record[2], 'tags': record[3], 'sort_key': record[4]}
     else:
-        return {'card_id': id, 'regular': 0, 'foil': 0, 'tags': '', 'sort_key': ''}
+        return {'id': id, 'regular': 0, 'foil': 0, 'tags': '', 'sort_key': ''}
 
 def add_card_to_collection(connection: Connection, collection_name: str, id: str, regular: int, foil: int, operation: str, sort_key: str) -> None:
     column = 'regular' if regular > 0 else 'foil'
-    query = f"SELECT {column} FROM {collection_name} WHERE card_id = '{id}'"
+    query = f"SELECT {column} FROM {collection_name} WHERE id = '{id}'"
 
     cursor = connection.cursor()
     cursor.execute(query)
@@ -109,7 +110,7 @@ def add_card_to_collection(connection: Connection, collection_name: str, id: str
         query = f'''            
             UPDATE {collection_name}
             SET {column} = {new_value}
-            WHERE card_id = '{id}'
+            WHERE id = '{id}'
             '''
         cursor = connection.cursor()
         cursor.execute(query)
@@ -123,5 +124,5 @@ def add_card_to_collection(connection: Connection, collection_name: str, id: str
         '''
 
         cursor = connection.cursor()
-        cursor.execute(query, format_card_values([id, regular, foil, '', sort_key]))
+        cursor.execute(query, format_card_values([id, regular, foil, None, sort_key]))
         connection.commit()
