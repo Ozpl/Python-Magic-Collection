@@ -11,7 +11,7 @@ from modules.ui import create_user_interface
 if not path.exists('config.ini'): config.create_default_config_file()
 config.build_folder_structure()
 config.build_file_structure()
-
+    
 #Download new bulk_data if needed
 get_data_from_scryfall()
 
