@@ -345,31 +345,54 @@ def collection_filters_searchbox_pressed():
     create_collection_tab_grid()
 #Collection -> Grid
 def create_collection_tab_grid():
+    #Another approach? Get summed cards width in one row, subtract it from whole grid width and get spacing. If spacing is less than some value, then delete one card from row
     global cards_to_display, last_width, last_height
     cards_to_display = []
 
-    current_size = col_lyt_crd_lyt_grd.geometry().size()
-    spacing_horizontal = 60
-    spacing_vertical = 20
+    current_grid_size = col_lyt_crd_lyt_grd.geometry().size()
 
-    minimum_card_width = 240
-    minimum_card_height = int(minimum_card_width * 1.39)
+    card_width = 215
+    card_height = int(card_width * 1.39)
 
-    cards_in_row = floor(current_size.width() / (minimum_card_width + spacing_horizontal))
-    cards_in_row = 7 if cards_in_row > 7 else cards_in_row
+    cards_in_row = floor(current_grid_size.width() / card_width)
+    cards_in_row = 8 if cards_in_row > 8 else cards_in_row
     cards_in_row = 3 if cards_in_row < 3 else cards_in_row
 
-    cards_in_col = floor(current_size.height() / (minimum_card_height + spacing_vertical))
+    cards_in_col = floor(current_grid_size.height() / card_height)
     cards_in_col = 4 if cards_in_col > 4 else cards_in_col
     cards_in_col = 2 if cards_in_col < 2 else cards_in_col
 
-    current_card_height = int(current_size.height() / (cards_in_col) - (cards_in_col * spacing_vertical))
-    current_card_height = 400 if current_card_height > 400 else current_card_height
-    current_card_width = int(current_card_height * 0.72)
+    grid_width = current_grid_size.width()
+    margin_horizontal = 20 * 2
+    total_cards_width = cards_in_row * card_width
+    horizontal_space_left = grid_width - total_cards_width - margin_horizontal
+    number_of_horizontal_spacings = (cards_in_row - 1)
+    spacing_horizontal = horizontal_space_left / number_of_horizontal_spacings
 
+    grid_height = current_grid_size.height()
+    margin_vertical = 20 * 2
+    total_cards_height = cards_in_col * card_height
+    vertical_space_left = grid_height - total_cards_height - margin_vertical
+    number_of_vertical_spacings = (cards_in_col - 1)
+    spacing_vertical = vertical_space_left / number_of_vertical_spacings
 
     #debug
-    col_lyt_pre_lyt_inf.setText(f"in row: {cards_in_row}, in col: {cards_in_col}\nwidth: {current_card_width}, height: {current_card_height}")
+    '''
+    col_lyt_pre_lyt_inf.setText(
+        f"""in row: {cards_in_row}, in col: {cards_in_col}\n
+        current_grid_size.width() / card_width: {current_grid_size.width() / card_width}\n
+        width: {card_width}, height: {card_height}\n
+        current_grid_size: {current_grid_size.width()}, {current_grid_size.height()}\n
+        grid_width: {grid_width}\n
+        total_cards_width: {total_cards_width}\n
+        horizontal_space_left: {horizontal_space_left}\n
+        number_of_horizontal_spacings: {number_of_horizontal_spacings}\n
+        spacing_horizontal: {spacing_vertical}
+        """)
+    '''
+
+    if spacing_horizontal < 15: cards_in_row = cards_in_row - 1
+    if spacing_vertical < 23: cards_in_col = cards_in_col - 1
     
     if last_width != cards_in_row or last_height != cards_in_col:
         for i in reversed(range(col_lyt_crd_lyt_grd_lyt.count())): 
@@ -397,40 +420,12 @@ def create_collection_tab_grid():
                     iml.setObjectName('image')
                     iml.setStyleSheet("margin:5px")
                     temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[j + i * cards_in_row]}.{image_extension}")
-                    imp = temp.scaled(current_card_width, current_card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                     iml.setPixmap(imp)
                     col_lyt_crd_lyt_grd_lyt.addWidget(iml, i, j)
 
     last_width = cards_in_row
     last_height = cards_in_col
-
-
-    '''
-            if (j + i//2 * cards_in_row) > (len(cards_to_display)-1):
-                iml = QLabel()
-                iml.setObjectName('alpha')
-                temp = QPixmap(f"{config.get('FOLDER', 'images')}/placeholder.png")
-
-                lbl = QLabel('')
-            else:
-                iml = QLabel()
-                iml.setObjectName('image')
-                temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[j + i//2 * cards_in_row]}.{image_extension}")
-                
-                lbl = QLabel('Owned: 12/14 (26)')
-
-            if i % 2 == 0:
-                imp = temp.scaled(gbx_height, gbx_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                iml.setPixmap(imp)
-
-                col_lyt_crd_lyt_grd_lyt.addWidget(iml, i, j)
-            elif i % 2 == 1:
-                lbl.setAlignment(Qt.AlignLeft)
-                lbl.setObjectName('info')
-                lbl.setMaximumHeight(50)
-        
-                col_lyt_crd_lyt_grd_lyt.addWidget(lbl, i, j)
-                '''
 
 #Collection -> Preview
 def create_collection_tab_preview():
@@ -467,10 +462,10 @@ def create_add_cards_tab():
     add_lyt_gbx_lyt_res_lyt.addWidget(add_lyt_gbx_lyt_res_lyt_adf)
     add_lyt_gbx_lyt_res_lyt_adf.clicked.connect(add_cards_add_foil)
 
-    cards_width = 680
-    add_lyt_gbx_lyt_res.setMinimumWidth(int(cards_width * 0.72))
-    add_lyt_gbx_lyt_res_lyt_iml.setMinimumSize(int(cards_width * 0.72), cards_width)
-    add_lyt_gbx_lyt_res_lyt_iml.setMaximumSize(int(cards_width * 0.72), cards_width)
+    cards_height = 680
+    add_lyt_gbx_lyt_res.setMinimumWidth(int(cards_height * 0.72))
+    add_lyt_gbx_lyt_res_lyt_iml.setMinimumSize(int(cards_height * 0.72), cards_height)
+    add_lyt_gbx_lyt_res_lyt_iml.setMaximumSize(int(cards_height * 0.72), cards_height)
 #Add cards -> Search -> Events
 def add_cards_search_button_pressed():
     global add_cards_found_cards, add_cards_sorted_list
@@ -498,7 +493,9 @@ def add_cards_list_selection_changed():
     current_index = add_lyt_gbx_lyt_lst.currentRow()
     download_image_if_not_downloaded(add_cards_found_cards[current_index])
     file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
-    add_lyt_gbx_lyt_res_lyt_iml.setPixmap(QPixmap(file_name))
+    pix = QPixmap(file_name)
+    pix_scaled = pix.scaled(int(680 * 0.72), 680, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    add_lyt_gbx_lyt_res_lyt_iml.setPixmap(pix_scaled)
     add_cards_update_card_count()
 def add_cards_add_regular():
     global cards_in_collection
