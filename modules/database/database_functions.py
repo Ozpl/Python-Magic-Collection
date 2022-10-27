@@ -1,7 +1,6 @@
 from ast import literal_eval
 from sqlite3 import connect, Connection, Error
-from modules.globals import config
-from modules.globals import DATABASE_INSERT_TO_MAIN
+from modules.globals import config, DATABASE_INSERT_TO_MAIN, IMPORT_PATTERN_MAP
 
 def create_connection(db_path: str) -> Connection:
     '''Create connection to .db file via sqlite3 function from given path.'''
@@ -17,7 +16,7 @@ def close_all_connections(*connections: Connection) -> None:
         connection.close()
 
 def prepare_records_for_load_transaction(card: dict, main: list) -> None:
-    '''This function appends given list with tuples, each containing card's properties designated to be stored in main table.'''
+    '''This function appends given list with tuples, each containing card's properties to be inserted into database.'''
     to_main = []
 
     #main_table
@@ -143,3 +142,12 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
     card_ids = [element[0] for element in record]
 
     return card_ids
+
+def get_all_cards_from_pattern(connection: Connection, pattern: list) -> list:
+    column_names = [IMPORT_PATTERN_MAP[element] for element in pattern]
+    
+    query = f"SELECT id, {', '.join(column_names)} FROM {get_database_table_name()}"
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    return cursor.fetchall()

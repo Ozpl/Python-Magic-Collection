@@ -23,7 +23,7 @@ QUERY_TRANSLATE = [
         "query_command": ["t", "type"]
     },
     {
-        "columns": ["set", "set_name"],
+        "columns": ['"set"', "set_name"],
         "type": "string",
         "query_command": ["e", "edition", "s", "set"]
     },
@@ -62,6 +62,11 @@ QUERY_TRANSLATE = [
         "columns": ["released_at"],
         "type": "datetime",
         "query_command": ["date", "year"]
+    },
+    {
+        "columns": ["collector_number"],
+        "type": "string_literal",
+        "query_command": ["cn", "collector"]
     }
 ]
 
@@ -115,10 +120,15 @@ def handle_query_when_string(table: str, column: str, value: str, command: str) 
     query = f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'"
     return query
 
+def handle_query_when_string_literal(table: str, column: str, value: str, command: str) -> str:
+    value = value.replace('"',"")
+    query = f"{table}.{column} {'=' if command.find('-') == -1 else '<>'} '{value}'"
+    return query
+
 def handle_query_when_string_multiple_columns(table: str, columns: str, value: str, command: str) -> str:
     # "set" LIKE 'dom' OR set_name LIKE 'dom'
     value = value.replace('"',"")
-    query = " OR ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '{value}'" for column in columns])
+    query = " OR ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'" for column in columns])
     return query
 
 def handle_query_when_string_array(table: str, column: str, value: str, command: str) -> str:
@@ -165,11 +175,13 @@ def construct_like_value(table_name: str, column_name: str, words: str) -> str:
     return like_value
 
 def handle_query_when_no_operator(table_name: str, default_columns: list, value: str) -> str:
-    words = value.split(" ")
+    words = value.replace('"',"").split(" ")
     query = " OR ".join([f"({construct_like_value(table_name, column, words)})" for column in default_columns])
     return query
 
 def construct_query_when(query_string: str) -> str:
+    #FIXME
+    #What if string contains ' or "?
     table_name = get_database_table_name()
     query_array = []
     query_elements = split_query(query_string)
@@ -179,11 +191,11 @@ def construct_query_when(query_string: str) -> str:
         try:
             element_array = element.split(operator)
         except ValueError:
-            query = handle_query_when_no_operator(table_name, DEFAULT_SEARCH_COLUMNS, query_string)
+            query = handle_query_when_no_operator(table_name, DEFAULT_SEARCH_COLUMNS, query_string.replace('\'', '\'\'').replace('"', '""'))
             return f"WHERE {query}"
             
         argument = element_array[0]
-        value = element_array[1]
+        value = element_array[1].replace('\'', '\'\'').replace('"', '""')
      
         for translation in QUERY_TRANSLATE:
             translation_commands = translation["query_command"]
@@ -199,6 +211,9 @@ def construct_query_when(query_string: str) -> str:
                             query_array.append(query)
                         elif column_type in ["datetime"]:
                             query = handle_query_when_date(table_name, operator, column_name, value, argument)
+                            query_array.append(query)
+                        elif column_type in ["string_literal"]:
+                            query = handle_query_when_string_literal(table_name, column_name, value, argument)
                             query_array.append(query)
                         else:
                             query = handle_query_when_string(table_name, column_name, value, argument)
@@ -228,9 +243,9 @@ def construct_query_when(query_string: str) -> str:
                             query = handle_query_when_object_prices(value, argument, operator)
                             query_array.append(query)   
 
-    return f"WHERE {' AND '.join(query_array)}" if query_array else ""
+    return f"""WHERE {' AND '.join([f"({element})" for element in query_array])}""" if query_array else ""
 
-def construct_query(query_string = None):
+def construct_query(query_string = None) -> str:
     table_name = get_database_table_name()
     query = f'SELECT id FROM {table_name} '
 

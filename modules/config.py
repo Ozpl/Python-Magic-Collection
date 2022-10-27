@@ -17,9 +17,7 @@ class Config:
             'decks_was_created': 'false'
         }
         self.config_parser['FOLDER'] = {
-            'collections': 'collections',
             'database': 'database',
-            'decks': 'decks',
             'images': 'images',
             'cards': 'images/cards',
             'symbols': 'images/symbols',
