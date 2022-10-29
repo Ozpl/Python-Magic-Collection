@@ -3,10 +3,10 @@ from os import path
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
-from modules.database.collections import create_collection, get_card_ids_from_collection
+from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection
 from modules.database.database_functions import get_card_from_db, get_card_ids_list, get_database_table_name
 from modules.database.query import construct_query
-from modules.globals import config
+from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
 from modules.logging import console_log
 from modules.ui_functions import add_card_to_collection_in_add_cards, download_image_if_not_downloaded, process_import_list, refresh_collection_names_in_corner, update_card_count_in_add_cards
 
@@ -86,7 +86,9 @@ widget_hierarchy = [
                 {'name': 'imp_lyt_gbx_lyt_par', 'type': 'QGroupBox'},
                     {'name': 'imp_lyt_gbx_lyt_par_lyt', 'type': 'QVBoxLayout'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_lbl', 'type': 'QLabel'},
+                        {'name': 'imp_lyt_gbx_lyt_par_lyt_cmb', 'type': 'QComboBox'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_lin', 'type': 'QLineEdit'},
+                        {'name': 'imp_lyt_gbx_lyt_par_lyt_chk', 'type': 'QCheckBox'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_leg', 'type': 'QLabel'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_imp', 'type': 'QPushButton'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_exp', 'type': 'QPushButton'},
@@ -162,29 +164,20 @@ imp_lyt_gbx_lyt_inp_lyt = QVBoxLayout()
 imp_lyt_gbx_lyt_inp_lyt_lbl = QLabel('Paste your imported list here:')
 #DEBUG
 #imp_lyt_gbx_lyt_inp_lyt_lin = QPlainTextEdit()
-imp_lyt_gbx_lyt_inp_lyt_lin = QPlainTextEdit(
-'''"Azorius Charm","Return to Ravnica",1,FALSE,0.10,Uncommon,145
-Cremate,"Return to Ravnica",1,FALSE,0.02,Common,59
-"Crosstown Courier","Return to Ravnica",1,FALSE,0.01,Common,34
-Downsize,"Return to Ravnica",1,FALSE,0.01,Common,38
-"Druid's Deliverance","Return to Ravnica",1,FALSE,0.06,Common,123
-Electrickery,"Return to Ravnica",1,FALSE,0.10,Common,93
-"Explosive Impact","Return to Ravnica",1,FALSE,0.01,Common,94
-"Hussar Patrol","Return to Ravnica",1,FALSE,0.01,Common,169
-"Island (258)","Return to Ravnica",1,FALSE,0.04,"Basic Land",258
-'''
-)
+imp_lyt_gbx_lyt_inp_lyt_lin = QPlainTextEdit()
 imp_lyt_gbx_lyt_par = QGroupBox()
 imp_lyt_gbx_lyt_par_lyt = QVBoxLayout()
-imp_lyt_gbx_lyt_par_lyt_lbl = QLabel('Write your list pattern:')
-imp_lyt_gbx_lyt_par_lyt_lin = QLineEdit('%n,%s,%q,%f,%*,%r,%c')
-imp_lyt_gbx_lyt_par_lyt_leg = QLabel("Available symbols:\n%n - card's name\n%s - set name\n%q - quantity\n%f - is foil?\n%r - rarity\n%c - collector's number\n%* - ignored phrase")
+imp_lyt_gbx_lyt_par_lyt_lbl = QLabel('Choose your list pattern:')
+imp_lyt_gbx_lyt_par_lyt_cmb = QComboBox()
+imp_lyt_gbx_lyt_par_lyt_lin = QLineEdit()
+imp_lyt_gbx_lyt_par_lyt_chk = QCheckBox('Does imported list contain header?')
+imp_lyt_gbx_lyt_par_lyt_leg = QLabel(UI_PATTERN_LEGEND)
 imp_lyt_gbx_lyt_par_lyt_imp = QPushButton('Import cards as new collection')
 imp_lyt_gbx_lyt_par_lyt_exp = QPushButton('Export cards from current collection')
 imp_lyt_gbx_lyt_res = QGroupBox()
 imp_lyt_gbx_lyt_res_lyt = QVBoxLayout()
 imp_lyt_gbx_lyt_res_lyt_lbl = QLabel('Import status:')
-imp_lyt_gbx_lyt_res_lyt_scr = QPlainTextEdit('Sample results\nSample results')
+imp_lyt_gbx_lyt_res_lyt_scr = QPlainTextEdit()
 
 stt = QWidget()
 stt_lyt = QVBoxLayout()
@@ -192,7 +185,7 @@ stt_lyt = QVBoxLayout()
 #Main
 def create_user_interface(db_connection, cl_connection, cd_connection):
     global database_connection, collections_connection, cards_connection, cards_in_db, cards_in_collection, filtered_cards, add_cards_found_cards
-    console_log('info', 'Creating UI...')
+    console_log('info', 'Creating UI')
 
     database_connection = db_connection
     collections_connection = cl_connection
@@ -281,13 +274,16 @@ def create_corner_widget():
     cor_lyt.addWidget(cor_lyt_btn)
     cor_lyt_btn.clicked.connect(add_collection_button_pressed)
     cor_lyt.addWidget(cor_lyt_cmb)
+    cor_lyt_cmb.currentIndexChanged.connect(current_collection_index_changed)
     cor_lyt.addWidget(cor_lyt_chk)
 #Corner -> Events
 add_collection_window = AddCollectionWindow()
 def add_collection_button_pressed():
     add_collection_window.show()
     add_collection_window.line_edit.setText('')
-
+def current_collection_index_changed():
+    config.set('COLLECTION', 'current_collection', format_collection_name(cor_lyt_cmb.currentText()))
+    create_collection_tab_grid()
 #Collection
 def create_collection_tab():
     tab_bar.addTab(col, config.get('APP', 'collection'))
@@ -428,7 +424,8 @@ def create_collection_tab_grid():
             card = get_card_from_db(database_connection, id)
             #FIXME what if card doesn't have image_uris
             image_uris = card['image_uris']
-            [download_image_if_not_downloaded(database_connection, card['id'], image_extension) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
+            if image_uris:
+                [download_image_if_not_downloaded(database_connection, card['id'], image_extension) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
 
         for i in range(cards_in_col):
             for j in range(cards_in_row):
@@ -550,7 +547,13 @@ def create_import_export_tab():
     imp_lyt_gbx_lyt.addWidget(imp_lyt_gbx_lyt_par)
     imp_lyt_gbx_lyt_par.setLayout(imp_lyt_gbx_lyt_par_lyt)
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_lbl)
+    imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_cmb)
+    imp_lyt_gbx_lyt_par_lyt_cmb.addItems([TEMPLATE_PATTERNS[0]['name'], 'Custom pattern'])
+    imp_lyt_gbx_lyt_par_lyt_cmb.currentIndexChanged.connect(pattern_combobox_index_changed)
+    imp_lyt_gbx_lyt_par_lyt_cmb.setCurrentIndex(1)
+    imp_lyt_gbx_lyt_par_lyt_cmb.setCurrentIndex(0)
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_lin)
+    imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_chk)
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_leg)
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_imp)
     imp_lyt_gbx_lyt_par_lyt_imp.clicked.connect(import_button_pressed)
@@ -563,7 +566,19 @@ def create_import_export_tab():
 #Import/export -> Events
 def import_button_pressed():
     import_list = imp_lyt_gbx_lyt_inp_lyt_lin.toPlainText().splitlines()
-    process_import_list(database_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr)
+    process_import_list(database_connection, collections_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr, imp_lyt_gbx_lyt_par_lyt_chk)
+def pattern_combobox_index_changed():
+    i = imp_lyt_gbx_lyt_par_lyt_cmb.currentIndex()
+    TEMPLATE_PATTERNS
+    if i == len(TEMPLATE_PATTERNS):
+        imp_lyt_gbx_lyt_par_lyt_lin.setText('')
+        imp_lyt_gbx_lyt_par_lyt_lin.setEnabled(True)
+        imp_lyt_gbx_lyt_par_lyt_chk.setEnabled(True)
+    else:
+        imp_lyt_gbx_lyt_par_lyt_lin.setText(TEMPLATE_PATTERNS[i]['pattern'])
+        imp_lyt_gbx_lyt_par_lyt_lin.setEnabled(False)
+        imp_lyt_gbx_lyt_par_lyt_chk.setChecked(True) if TEMPLATE_PATTERNS[i]['header'] else imp_lyt_gbx_lyt_par_lyt_chk.setChecked(False)
+        imp_lyt_gbx_lyt_par_lyt_chk.setEnabled(False)
 
 #Settings
 def create_settings_tab():

@@ -9,9 +9,9 @@ from modules.logging import console_log
 
 def database_load(connection: Connection) -> None:
     with open(f"./{config.get('FOLDER', 'database')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
-        console_log('info', 'Loading has started')
+        console_log('info', 'Loading of a .json file has started')
         data = load(f)
-        console_log('info', 'Successfully loaded .json file')
+        console_log('info', 'Successfully loaded .json file, preparing transaction')
 
         transaction = []
         
@@ -31,7 +31,7 @@ def database_load(connection: Connection) -> None:
         cur.executemany(query, transaction)
         connection.commit()
 
-        console_log('info', f'Loading is done, added {len(data)} cards')
+        console_log('info', f'Transaction was executed, added {len(data)} cards to database')
 
     for file in listdir(config.get('FOLDER', 'database')):
         f = path.join(config.get('FOLDER', 'database'), file)

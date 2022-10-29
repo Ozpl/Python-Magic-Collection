@@ -65,14 +65,15 @@ def create_sort_key_string(card: dict) -> str:
         color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
 
         match (len(card['colors'])):
-            case 1: sort_key += sort_key_colors_mapping(card['colors'], color_map_one)
-            case 2: sort_key += sort_key_colors_mapping(card['colors'], color_map_two)
-            case 3: sort_key += sort_key_colors_mapping(card['colors'], color_map_three)
-            case 4: sort_key += sort_key_colors_mapping(card['colors'], color_map_four)
-            case 5: sort_key += '31'
-            case 0: sort_key += '32'
+            case 1: sort_key = sort_key_colors_mapping(card['colors'], color_map_one)
+            case 2: sort_key = sort_key_colors_mapping(card['colors'], color_map_two)
+            case 3: sort_key = sort_key_colors_mapping(card['colors'], color_map_three)
+            case 4: sort_key = sort_key_colors_mapping(card['colors'], color_map_four)
+            case 5: sort_key = '31'
+            case 0: sort_key = '32'
+        if 'Land' in card['type_line']: sort_key = '33'
     except KeyError:
-        sort_key += '32'
+        sort_key = '34'
 
     try:
         cmc = str(int(card['cmc']))
@@ -124,8 +125,6 @@ def get_card_from_db(connection: Connection, card_id: str) -> dict:
 
     card = {column_names[i]: element for i, element in enumerate(record)}
 
-    #{card[key]: literal_eval(card[key]) for key in card.keys()}
-
     for key in card.keys():
         if card[key]:
             if isinstance(card[key], str):
@@ -143,10 +142,28 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_all_cards_from_pattern(connection: Connection, pattern: list) -> list:
+def get_all_cards_from_pattern_as_joined_string(connection: Connection, pattern: list) -> list:    
+    
+    query = f"SELECT {', '.join(pattern)} FROM {get_database_table_name()}"
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    records = cursor.fetchall()
+    
+    results = []
+    
+    for record in records:
+        s = ''
+        for element in record:
+            s = s + element
+        results.append(s)
+        
+    return results
+
+def get_all_cards_from_pattern_map(connection: Connection, pattern: list) -> list:
     column_names = [IMPORT_PATTERN_MAP[element] for element in pattern]
     
-    query = f"SELECT id, {', '.join(column_names)} FROM {get_database_table_name()}"
+    query = f"SELECT id, {', '.join(column_names)}, sort_key FROM {get_database_table_name()}"
     
     cursor = connection.cursor()
     cursor.execute(query)

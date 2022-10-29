@@ -17,18 +17,14 @@ def create_collections_list(connection: Connection) -> None:
 
 def create_collection(connection: Connection, name: str) -> None:
     try:
-        whitelist = ascii_letters + digits
-        formatted_name = ''
-        for char in name.lower():
-            if char in whitelist:
-                formatted_name += char
+        formatted_name = format_collection_name(name)
         column_names = query_get_table_columns(connection, 'collection_list')[1:]
 
         console_log('info', f'Creating {formatted_name} as collections subtable')
 
         placeholders = ', '.join('?' * len(column_names))
         query = f'''
-        INSERT INTO collection_list({', '.join(column_names)}) VALUES ({placeholders})
+        INSERT OR REPLACE INTO collection_list({', '.join(column_names)}) VALUES ({placeholders})
         '''
 
         cursor = connection.cursor()
@@ -126,3 +122,11 @@ def add_card_to_collection(connection: Connection, collection_name: str, id: str
         cursor = connection.cursor()
         cursor.execute(query, format_card_values([id, regular, foil, None, sort_key]))
         connection.commit()
+        
+def format_collection_name(name: str) -> str:
+    whitelist = ascii_letters + digits
+    formatted_name = ''
+    for char in name.lower():
+        if char in whitelist:
+            formatted_name += char
+    return formatted_name
