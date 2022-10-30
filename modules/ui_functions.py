@@ -2,9 +2,10 @@ from os import path
 from shutil import copyfileobj
 from sqlite3 import Connection
 from PyQt5.QtWidgets import QCheckBox, QComboBox, QLabel, QPlainTextEdit
+from re import compile
 from requests import get
 from modules.database.collections import add_card_to_collection, create_collection, get_all_collections_names_as_array, get_card_from_collection
-from modules.database.database_functions import create_sort_key_string, get_all_cards_from_pattern_as_joined_string, get_all_cards_from_pattern_map, get_card_from_db, get_card_ids_list, get_database_table_name
+from modules.database.database_functions import create_sort_key_string, get_all_cards_from_pattern_as_joined_string, get_card_from_db, get_card_ids_list, get_database_table_name
 from modules.logging import console_log
 from modules.database.query import construct_query
 from modules.globals import config
@@ -51,64 +52,49 @@ def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection
 #Import/export tab
 def process_import_list(db_connection: Connection, col_connection: Connection, import_list: list, pattern: str, results_plaintextedit: QPlainTextEdit, header_checkbox: QCheckBox) -> None:
     console_log('INFO', 'Importing has started')
+    
     results_plaintextedit.setPlainText('')
-    results = {'ids': [], 'quantities': [], 'lines': [], 'sort_keys': []}
-    
-    db_cards_ids = get_card_ids_list(db_connection, f'SELECT id FROM {get_database_table_name()}')
-    db_cards_sort_keys = get_card_ids_list(db_connection, f'SELECT sort_key FROM {get_database_table_name()}')
-    
-    db_cards_sc = get_all_cards_from_pattern_as_joined_string(db_connection, ['set_name', 'collector_number'])
-    db_cards_nc = get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'collector_number'])
-    db_cards_ns = get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'set_name'])
-    db_cards = [db_cards_sc, db_cards_nc, db_cards_ns]
-    
-    console_log('INFO', 'Compiled all combinations of cards\' joined strings, reading imported list')
-    
-    cards_to_import = []
     unpacked_pattern = [*pattern.split(',')]
+    
+    patterned_cards = []
+    cards_to_import = []
     
     if header_checkbox.isChecked():
         import_list = import_list[1:]
-    
     for line in import_list:
         card_dict = {}
         card_list = split_line_to_list(line)
-        for i, card_name in enumerate(card_list):
-            card_dict[unpacked_pattern[i]] = card_name
-        cards_to_import.append(card_dict)
-        
-    quantities = get_card_quantities_and_remove_duplicates(cards_to_import)
-    cards_to_add = len(cards_to_import)        
+        for i, card in enumerate(card_list):
+            card_dict[unpacked_pattern[i]] = card
+        card_dict = handle_names_and_sets_exceptions(card_dict)
+        patterned_cards.append(card_dict)
     
-    import_cards_search_sc = [f"{element['%s']}{element['%c']}" for element in cards_to_import]
-    import_cards_search_nc = [f"{element['%n']}{element['%c']}" for element in cards_to_import]
-    import_cards_search_ns = [f"{element['%n']}{element['%s']}" for element in cards_to_import]
-    import_cards_searches = [import_cards_search_sc, import_cards_search_nc, import_cards_search_ns]
+    console_log('INFO', 'Imported list processed, compiling database info')
     
-    console_log('INFO', 'Imported list processed, preparing transaction')
+    cards_to_import = get_unique_cards_to_import(patterned_cards)
+    db_info = {
+        'ids': get_card_ids_list(db_connection, f'SELECT id FROM {get_database_table_name()}'),
+        'sort_keys': get_card_ids_list(db_connection, f'SELECT sort_key FROM {get_database_table_name()}'),
+        '%s%c': get_all_cards_from_pattern_as_joined_string(db_connection, ['set_name', 'collector_number']),
+        '%n%c': get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'collector_number']),
+        '%n%s': get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'set_name'])
+    }
     
-    card_ids = get_card_results(import_cards_searches, db_cards, cards_to_import, db_cards_ids, quantities, db_cards_sort_keys)
-    results['ids'] =  card_ids['ids']
-    results['lines'] = card_ids['lines']
-    results['quantities'] = card_ids['quantities']
-    results['sort_keys'] = card_ids['sort_keys']
+    console_log('INFO', 'Database info compiled, searching cards in database')
+    
+    compiled_results = find_cards_in_db_and_compile_results(cards_to_import, db_info)
     
     transaction = []
-    for i in range(len(results['ids'])):
-        card = []
-        card.append(results['ids'][i])
-        card.append(results['quantities'][i]['regular'])
-        card.append(results['quantities'][i]['foil'])
-        card.append('')
-        card.append(results['sort_keys'][i])
-        transaction.append(tuple(card))
-        
-    results_plaintextedit_string = f"Successfully added {len(results['ids'])} cards out of {cards_to_add}, scroll to the bottom to see errors.\n------------\n"
-    for i in range(len(results['lines'])):
-        results_plaintextedit_string = f"{results_plaintextedit_string}{results['lines'][i]}\n"
+    success_count = int(len(compiled_results['id']) - compiled_results['id'].count(''))
+    results_string = f"Successfully added {success_count} cards out of {len(compiled_results['id'])}.\n------------\n"
     
-    results_plaintextedit.setPlainText(results_plaintextedit_string)
-        
+    for i in range(len(compiled_results['id'])):
+        if compiled_results['id'][i] != '':
+            transaction.append((compiled_results['id'][i], compiled_results['regular'][i], compiled_results['foil'][i], '', compiled_results['sort_key'][i]))
+        results_string = f"{results_string}{compiled_results['line'][i]}\n"
+    
+    results_plaintextedit.setPlainText(results_string)
+
     console_log('INFO', 'Transation prepared, commiting to collection.db')
     
     column_names = ['id', 'regular', 'foil', 'tags', 'sort_key']
@@ -126,7 +112,6 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
     col_connection.commit()
     
     console_log('INFO', f'Transaction completed, created new collection "{collection_name}"')
-        
 def split_line_to_list(card: str) -> list:
     last_index = 0
     opened_quatation = False
@@ -143,73 +128,109 @@ def split_line_to_list(card: str) -> list:
                 split_card.append(card[last_index:i])
             last_index = i + 1
     split_card.append(card[last_index:])
+    return split_card
+def handle_names_and_sets_exceptions(split_card: dict) -> dict:
+    names = [
+        ' (Showcase)',
+        ' (Borderless)' ,
+        ' (Foil Etched)',
+        ' (Showcase)',
+        ' (Extended Art)',
+        ' (Retro Frame)',
+        ' (a)',
+        ' (b)',
+        ' (No PW Symbol)',
+        ' (Dracula)',
+        ' (Skyscraper)' ,
+        ' (Gilded Foil)',
+        ' (Thick Stock)',
+        ' (Non-Foil)'
+    ]
+    sets = [
+        ' Variants'
+    ]
+
+    #FIXME
+    #Pattern is never matched, even though there are cards like 'Plains (79)' or 'Mountain (36)'
+    pattern = r' \(\d+\)'
+    re = compile(pattern)
+    if re.match(split_card['%n']) is not None:
+        re.sub(pattern, '', split_card['%n'])
+    
+    for element in names:
+        if element in split_card['%n']:
+            split_card['%n'] = split_card['%n'].replace(element, '')
+    
+    for element in sets:
+        if element in split_card['%s']:
+            split_card['%s'] = split_card['%s'].replace(element, '')
     
     return split_card
-
-def get_card_quantities_and_remove_duplicates(cards_to_import: list) -> list:
-    unique_cards_names = []
-    unique_cards_quantity = []
-    duplicate_indexes = []
-    for i, card in enumerate(cards_to_import):
-        name = f"{card['%n']}{card['%s']}{card['%c']}"
-        
-        if name in unique_cards_names:
-            if card['%f'].upper() == 'TRUE': unique_cards_quantity[unique_cards_names.index(name)]['foil'] += int(card['%q'])
-            else: unique_cards_quantity[unique_cards_names.index(name)]['regular'] += int(card['%q'])
-            duplicate_indexes.append(i)
-        else:
-            unique_cards_names.append(name)
-            quantities = {'regular': 0, 'foil': 0}
-            
-            if card['%f'].upper() == 'TRUE': quantities['foil'] = int(card['%q'])
-            else: quantities['regular'] = int(card['%q'])
-            
-            unique_cards_quantity.append(quantities)
+def get_unique_cards_to_import(patterned_cards: list) -> list:
+    cards_to_import = []
+    unique_names = []
     
-    duplicate_indexes.sort()
-    duplicate_indexes.reverse()
-    for element in duplicate_indexes:
-        cards_to_import.pop(element)
-    
-    return unique_cards_quantity 
-
-def get_card_results(all_imports: list, all_db: list, cards_to_import: list, db_ids: list, cards_quantities: list, db_cards_sort_keys: list) -> dict:
-    result_lines = []
-    result_ids = []
-    result_quantities = []
-    result_sort_keys = []
-    
-    for i in range(len(all_imports)):
-        cards_indexes_found_in_db = []
-        cards_indexes_found_in_import = []
-        for j, card_name in enumerate(all_imports[i]):
-            if card_name in all_db[i]:
-                cards_indexes_found_in_db.append(all_db[i].index(card_name))
-                cards_indexes_found_in_import.append(j)
-                result_ids.append(db_ids[cards_indexes_found_in_db[j]])
-                result_quantities.append(cards_quantities[cards_indexes_found_in_import[j]])
-                result_sort_keys.append(db_cards_sort_keys[cards_indexes_found_in_db[j]])
-                result_lines.append(f"Card found during search #{i+1} - {cards_to_import[j]['%n']} ({cards_to_import[j]['%c']}) [{cards_to_import[j]['%s']}]")
+    for card in patterned_cards:
+        card_dict = {'name': '', '%s%c': '', '%n%c': '', '%n%s': '', 'regular': 0, 'foil': 0}
+        name = f"{card['%n']} ({card['%c']}) [{card['%s']}]"
+        if name in unique_names:
+            index = [i for i in range(len(cards_to_import)) if cards_to_import[i]['name'] == name][0]
+            if card['%f'].upper() == 'FALSE':
+                cards_to_import[index]['regular'] += int(card['%q'])
             else:
-                cards_indexes_found_in_db.append(None)
-                cards_indexes_found_in_import.append(None)
-                result_lines.append(f"Card NOT found during search #{i+1} - {cards_to_import[j]['%n']} ({cards_to_import[j]['%c']}) [{cards_to_import[j]['%s']}]")
+                cards_to_import[index]['foil'] += int(card['%q'])
+        else:
+            unique_names.append(name)
+            card_dict['name'] = name
+            card_dict['%s%c'] = f"{card['%s']}{card['%c']}"
+            card_dict['%n%c'] = f"{card['%n']}{card['%c']}"
+            card_dict['%n%s'] = f"{card['%n']}{card['%s']}"
+            if card['%f'].upper() == 'FALSE':
+                card_dict['regular'] = int(card['%q'])
+            else:
+                card_dict['foil'] = int(card['%q'])
+            cards_to_import.append(card_dict)
+    
+    return cards_to_import
+def find_cards_in_db_and_compile_results(cards_to_import: list, db_info: dict) -> dict:
+    compiled_results = {'name': [], 'id': [], 'regular': [], 'foil': [], 'sort_key': [], 'line': []}
+    
+    for card in cards_to_import:
+        index = -1
+        if find_card_by_search_pattern(card, db_info['%s%c'], '%s%c'):
+            index = db_info['%s%c'].index(card['%s%c'])
+            add_card_to_compiled_results(card, compiled_results, db_info['ids'][index], db_info['sort_keys'][index], 1)
+        elif find_card_by_search_pattern(card, db_info['%n%c'], '%n%c'):
+            index = db_info['%n%c'].index(card['%n%c'])
+            add_card_to_compiled_results(card, compiled_results, db_info['ids'][index], db_info['sort_keys'][index], 2)
+        elif find_card_by_search_pattern(card, db_info['%n%s'], '%n%s'):
+            index = db_info['%n%s'].index(card['%n%s'])
+            add_card_to_compiled_results(card, compiled_results, db_info['ids'][index], db_info['sort_keys'][index], 3)
+        else:
+            add_card_to_compiled_results(card, compiled_results, '', '', 0)
         
-        while None in cards_indexes_found_in_db:
-            cards_indexes_found_in_db.remove(None)
-        cards_indexes_found_in_db.sort()
-        cards_indexes_found_in_db.reverse()
-        for index in cards_indexes_found_in_db:
-            db_ids.pop(index)
-            [element.pop(index) for element in all_db]
-            
-        while None in cards_indexes_found_in_import:
-            cards_indexes_found_in_import.remove(None)
-        cards_indexes_found_in_import.sort()
-        cards_indexes_found_in_import.reverse()
-        for index in cards_indexes_found_in_import:
-            cards_to_import.pop(index)
-            cards_quantities.pop(index)
-            [element.pop(index) for element in all_imports]
-
-    return {'ids': result_ids, 'lines': result_lines, 'quantities': result_quantities, 'sort_keys': result_sort_keys}
+        if index > -1:
+            for key in db_info:
+                db_info[key].pop(index)
+        
+    return compiled_results
+def find_card_by_search_pattern(card: dict, db_info_pattern: list, pattern: str) -> bool:
+    if card[pattern] in db_info_pattern:
+        return True
+    else:
+        return False
+def add_card_to_compiled_results(card: dict, compiled_results: dict, id: str, sort_key: str, number_of_search: int) -> None:
+    if number_of_search > 0:
+        compiled_results['name'].append(card['name'])
+        compiled_results['id'].append(id)
+        compiled_results['regular'].append(card['regular'])
+        compiled_results['foil'].append(card['foil'])
+        compiled_results['sort_key'].append(sort_key)
+        compiled_results['line'].append(f"Found in search #{number_of_search} - {card['name']}")
+    else:
+        compiled_results['name'].append(card['name'])
+        compiled_results['id'].append('')
+        compiled_results['regular'].append(0)
+        compiled_results['foil'].append(0)
+        compiled_results['sort_key'].append('')
+        compiled_results['line'].append(f"NOT FOUND IN DB - {card['name']}")

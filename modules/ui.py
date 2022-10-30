@@ -2,7 +2,7 @@ from math import floor
 from os import path
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
 from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection
 from modules.database.database_functions import get_card_from_db, get_card_ids_list, get_database_table_name
 from modules.database.query import construct_query
@@ -13,6 +13,9 @@ from modules.ui_functions import add_card_to_collection_in_add_cards, download_i
 app = QApplication([])
 app_lyt = QVBoxLayout()
 tab_bar = QTabWidget()
+
+#TODO
+#QDoubleSpinBox as page controls
 
 last_width = 0
 last_height = 0
@@ -162,8 +165,6 @@ imp_lyt_gbx_lyt = QHBoxLayout()
 imp_lyt_gbx_lyt_inp = QGroupBox()
 imp_lyt_gbx_lyt_inp_lyt = QVBoxLayout()
 imp_lyt_gbx_lyt_inp_lyt_lbl = QLabel('Paste your imported list here:')
-#DEBUG
-#imp_lyt_gbx_lyt_inp_lyt_lin = QPlainTextEdit()
 imp_lyt_gbx_lyt_inp_lyt_lin = QPlainTextEdit()
 imp_lyt_gbx_lyt_par = QGroupBox()
 imp_lyt_gbx_lyt_par_lyt = QVBoxLayout()
