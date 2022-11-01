@@ -50,7 +50,7 @@ def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection
         )
 
 #Import/export tab
-def process_import_list(db_connection: Connection, col_connection: Connection, import_list: list, pattern: str, results_plaintextedit: QPlainTextEdit, header_checkbox: QCheckBox) -> None:
+def process_import_list(db_connection: Connection, col_connection: Connection, import_list: list, pattern: str, results_plaintextedit: QPlainTextEdit, errors_plaintextedit: QPlainTextEdit, header_checkbox: QCheckBox) -> None:
     console_log('INFO', 'Importing has started')
     
     results_plaintextedit.setPlainText('')
@@ -84,18 +84,24 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
     
     compiled_results = find_cards_in_db_and_compile_results(cards_to_import, db_info)
     
+    console_log('INFO', 'Cards found, preparing transaction')
+    
     transaction = []
     success_count = int(len(compiled_results['id']) - compiled_results['id'].count(''))
-    results_string = f"Successfully added {success_count} cards out of {len(compiled_results['id'])}.\n------------\n"
+    results_string = ''
+    errors_string = f"Successfully added {success_count} cards out of {len(compiled_results['id'])}, there are {len(compiled_results['id']) - success_count} errors.\n------------\n"
     
     for i in range(len(compiled_results['id'])):
         if compiled_results['id'][i] != '':
             transaction.append((compiled_results['id'][i], compiled_results['regular'][i], compiled_results['foil'][i], '', compiled_results['sort_key'][i]))
+        else:
+            errors_string = f"{errors_string}{compiled_results['line'][i]}\n"
         results_string = f"{results_string}{compiled_results['line'][i]}\n"
     
     results_plaintextedit.setPlainText(results_string)
+    errors_plaintextedit.setPlainText(errors_string)
 
-    console_log('INFO', 'Transation prepared, commiting to collection.db')
+    console_log('INFO', 'Transaction prepared, commiting to collection.db')
     
     column_names = ['id', 'regular', 'foil', 'tags', 'sort_key']
     placeholders = ', '.join('?' * len(column_names))

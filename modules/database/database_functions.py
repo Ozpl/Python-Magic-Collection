@@ -58,6 +58,8 @@ def create_sort_key_string(card: dict) -> str:
     '''Create sort_key string, to properly sort cards in collection by its value.'''
     sort_key = ''
     
+    #TODO
+    #Set another value for lands: mana_produced
     try:
         color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
         color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
@@ -89,7 +91,7 @@ def create_sort_key_string(card: dict) -> str:
         
     return sort_key
 
-def query_get_table_columns(connection: Connection, table_name: str):
+def query_get_table_columns(connection: Connection, table_name: str) -> list:
     query = f'''
     SELECT * FROM {table_name} LIMIT 1
     '''

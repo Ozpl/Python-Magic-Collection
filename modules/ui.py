@@ -42,6 +42,7 @@ widget_hierarchy = [
                         {'name': 'col_lyt_crd_lyt_flt_lyt_sbu', 'type': 'QPushButton'},
                 {'name': 'col_lyt_crd_lyt_tag', 'type': 'QGroupBox'},
                     {'name': 'col_lyt_crd_lyt_tag_lyt', 'type': 'QHBoxLayout'},
+                        {'name': 'col_lyt_crd_lyt_tag_lyt_pag', 'type': 'QDoubleSpinBox'},
                 {'name': 'col_lyt_crd_lyt_grd', 'type': 'QGroupBox'},
                     {'name': 'col_lyt_crd_lyt_grd_lyt', 'type': 'QGridLayout'},
                         #Inside col_lyt_crd_lyt_grd_lyt
@@ -95,6 +96,8 @@ widget_hierarchy = [
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_leg', 'type': 'QLabel'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_imp', 'type': 'QPushButton'},
                         {'name': 'imp_lyt_gbx_lyt_par_lyt_exp', 'type': 'QPushButton'},
+                        {'name': 'imp_lyt_gbx_lyt_par_lyt_inl', 'type': 'QLabel'},
+                        {'name': 'imp_lyt_gbx_lyt_par_lyt_inp', 'type': 'QPlainTextEdit'},
                 {'name': 'imp_lyt_gbx_lyt_res', 'type': 'QGroupBox'},
                     {'name': 'imp_lyt_gbx_lyt_res_lyt', 'type': 'QVBoxLayout'},
                         {'name': 'imp_lyt_gbx_lyt_res_lyt_lbl', 'type': 'QLabel'},
@@ -125,6 +128,7 @@ col_lyt_crd_lyt_flt_lyt_sbx = QLineEdit('thassa')
 col_lyt_crd_lyt_flt_lyt_sbu = QPushButton('Search')
 col_lyt_crd_lyt_tag = QGroupBox()
 col_lyt_crd_lyt_tag_lyt = QHBoxLayout()
+col_lyt_crd_lyt_tag_lyt_pag = QDoubleSpinBox()
 col_lyt_crd_lyt_grd = QGroupBox()
 col_lyt_crd_lyt_grd_lyt = QGridLayout()
 col_lyt_crd_lyt_grd_lyt_crd = [] #[QGroupBox]
@@ -175,6 +179,8 @@ imp_lyt_gbx_lyt_par_lyt_chk = QCheckBox('Does imported list contain header?')
 imp_lyt_gbx_lyt_par_lyt_leg = QLabel(UI_PATTERN_LEGEND)
 imp_lyt_gbx_lyt_par_lyt_imp = QPushButton('Import cards as new collection')
 imp_lyt_gbx_lyt_par_lyt_exp = QPushButton('Export cards from current collection')
+imp_lyt_gbx_lyt_par_lyt_inl = QLabel('Import errors:')
+imp_lyt_gbx_lyt_par_lyt_inp = QPlainTextEdit()
 imp_lyt_gbx_lyt_res = QGroupBox()
 imp_lyt_gbx_lyt_res_lyt = QVBoxLayout()
 imp_lyt_gbx_lyt_res_lyt_lbl = QLabel('Import status:')
@@ -239,8 +245,8 @@ class UI(QWidget):
             else: image_extension = 'jpg'
 
             current_collection = config.get('COLLECTION', 'current_collection')
-            current_page = config.get('COLLECTION', 'current_page')
-            cards_per_page = config.get('COLLECTION', 'grid_number_of_cards')
+            current_page = config.get_int('COLLECTION', 'current_page')
+            cards_per_page = config.get_int('COLLECTION', 'grid_number_of_cards')
 
         create_corner_widget()
         create_collection_tab()
@@ -302,6 +308,12 @@ def create_collection_tab():
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbu)
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_tag)
     col_lyt_crd_lyt_tag.setLayout(col_lyt_crd_lyt_tag_lyt)
+    col_lyt_crd_lyt_tag_lyt.addWidget(col_lyt_crd_lyt_tag_lyt_pag)
+    col_lyt_crd_lyt_tag_lyt_pag.setDecimals(0)
+    col_lyt_crd_lyt_tag_lyt_pag.setMinimum(1)
+    col_lyt_crd_lyt_tag_lyt_pag.setMaximum(999999)
+    col_lyt_crd_lyt_tag_lyt_pag.valueChanged.connect(page_control_value_changed)
+    col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_grd)
     col_lyt_crd_lyt_grd.setLayout(col_lyt_crd_lyt_grd_lyt)
     col_lyt.addWidget(col_lyt_pre)
@@ -343,7 +355,7 @@ def create_collection_tab_filters():
     col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_pressed)
 #Collection -> Filters -> Events
 def collection_filters_searchbox_pressed():
-    global filtered_cards, last_width
+    global filtered_cards, last_width, last_height
     if col_lyt_crd_lyt_flt_lyt_sbx.text():
         filtered_cards = []
         if config.get_boolean('COLLECTION', 'show_database'):
@@ -356,8 +368,17 @@ def collection_filters_searchbox_pressed():
                     filtered_cards.append(element)
     else:
         filtered_cards = []
-    
+        
+    col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
     last_width = -1
+    last_height = -1
+    create_collection_tab_grid()
+#Collection -> Tags -> Events
+def page_control_value_changed():
+    global last_width, last_height
+    config.set('COLLECTION', 'current_page', str(int(col_lyt_crd_lyt_tag_lyt_pag.value())))
+    last_width = -1
+    last_height = -1
     create_collection_tab_grid()
 #Collection -> Grid
 def create_collection_tab_grid():
@@ -377,6 +398,8 @@ def create_collection_tab_grid():
     cards_in_col = floor(current_grid_size.height() / card_height)
     cards_in_col = 4 if cards_in_col > 4 else cards_in_col
     cards_in_col = 2 if cards_in_col < 2 else cards_in_col
+    
+    cards_on_grid = cards_in_row * cards_in_col
 
     grid_width = current_grid_size.width()
     margin_horizontal = 20 * 2
@@ -414,6 +437,8 @@ def create_collection_tab_grid():
         for i in reversed(range(col_lyt_crd_lyt_grd_lyt.count())): 
             col_lyt_crd_lyt_grd_lyt.itemAt(i).widget().setParent(None)
 
+        #TODO
+        #Set pagination here for filtered cards, when filter is on: set page to one and when the filter is off: return to previously viewed page
         if filtered_cards:
             cards_to_display = filtered_cards
         elif config.get_boolean('COLLECTION', 'show_database'):
@@ -421,25 +446,36 @@ def create_collection_tab_grid():
         else:
             cards_to_display = cards_in_collection
 
-        for id in cards_to_display:
+        current_page = config.get_int('COLLECTION', 'current_page')
+        starting_index = (current_page - 1) * cards_on_grid
+        ending_index = (current_page - 1) * cards_on_grid + cards_on_grid
+
+        for id in cards_to_display[starting_index:ending_index]:
             card = get_card_from_db(database_connection, id)
             #FIXME what if card doesn't have image_uris
             image_uris = card['image_uris']
             if image_uris:
                 [download_image_if_not_downloaded(database_connection, card['id'], image_extension) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
 
-        for i in range(cards_in_col):
-            for j in range(cards_in_row):
-                if (j + i * cards_in_row) > len(cards_to_display)-1:
-                    pass
+        x = 1
+        y = 1
+        for i in range(starting_index, ending_index):
+            if i > len(cards_to_display) - 1:
+                pass
+            else:
+                iml = QLabel()
+                iml.setObjectName('image')
+                iml.setStyleSheet("margin:5px")
+                temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[i]}.{image_extension}")
+                imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                iml.setPixmap(imp)
+                col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
+                
+                if x % cards_in_row != 0:
+                    x = x + 1
                 else:
-                    iml = QLabel()
-                    iml.setObjectName('image')
-                    iml.setStyleSheet("margin:5px")
-                    temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[j + i * cards_in_row]}.{image_extension}")
-                    imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    iml.setPixmap(imp)
-                    col_lyt_crd_lyt_grd_lyt.addWidget(iml, i, j)
+                    x = 1
+                    y = y + 1
 
     last_width = cards_in_row
     last_height = cards_in_col
@@ -559,6 +595,8 @@ def create_import_export_tab():
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_imp)
     imp_lyt_gbx_lyt_par_lyt_imp.clicked.connect(import_button_pressed)
     imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_exp)
+    imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_inl)
+    imp_lyt_gbx_lyt_par_lyt.addWidget(imp_lyt_gbx_lyt_par_lyt_inp)
     imp_lyt_gbx_lyt.addWidget(imp_lyt_gbx_lyt_res)
     imp_lyt_gbx_lyt_res.setLayout(imp_lyt_gbx_lyt_res_lyt)
     imp_lyt_gbx_lyt_res_lyt.addWidget(imp_lyt_gbx_lyt_res_lyt_lbl)
@@ -567,7 +605,7 @@ def create_import_export_tab():
 #Import/export -> Events
 def import_button_pressed():
     import_list = imp_lyt_gbx_lyt_inp_lyt_lin.toPlainText().splitlines()
-    process_import_list(database_connection, collections_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr, imp_lyt_gbx_lyt_par_lyt_chk)
+    process_import_list(database_connection, collections_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr, imp_lyt_gbx_lyt_par_lyt_inp, imp_lyt_gbx_lyt_par_lyt_chk)
 def pattern_combobox_index_changed():
     i = imp_lyt_gbx_lyt_par_lyt_cmb.currentIndex()
     TEMPLATE_PATTERNS
