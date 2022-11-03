@@ -1,6 +1,6 @@
 from ast import literal_eval
 from sqlite3 import connect, Connection, Error
-from modules.globals import config, DATABASE_INSERT_TO_MAIN, IMPORT_PATTERN_MAP
+from modules.globals import config, DATABASE_INSERT_TO_MAIN
 
 def create_connection(db_path: str) -> Connection:
     '''Create connection to .db file via sqlite3 function from given path.'''
@@ -144,6 +144,33 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
     card_ids = [element[0] for element in record]
 
     return card_ids
+
+def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
+    query = f"SELECT id, prices FROM {get_database_table_name()}"
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    record = cursor.fetchall()
+
+    cards = {'id': [], 'prices_regular': [], 'prices_foil': []}
+    
+    cards['id'] = [element[0] for element in record]
+    
+    for element in record:
+        prices = literal_eval(element[1])
+        if price_type == 'eur':
+            cards['prices_regular'].append(prices['eur'])
+            cards['prices_foil'].append(prices['eur_foil'])
+        elif price_type == 'usd':
+            if prices['usd_etched']:
+                cards['prices_foil'].append(prices['usd_etched'])
+            else:
+                cards['prices_regular'].append(prices['usd'])
+                cards['prices_foil'].append(prices['usd_foil'])
+        elif price_type == 'tix':
+            cards['prices_regular'].append(prices['tix'])
+    
+    return cards
 
 def get_all_cards_from_pattern_as_joined_string(connection: Connection, pattern: list) -> list:
     query = f"SELECT {', '.join(pattern)} FROM {get_database_table_name()}"

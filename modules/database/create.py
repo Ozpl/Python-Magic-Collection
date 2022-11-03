@@ -5,7 +5,7 @@ from typing import Any
 from modules.globals import config
 from modules.logging import console_log
 from modules.globals import DATABASE_INSERT_TO_MAIN
-from modules.database.database_functions import get_database_table_name
+from modules.database.functions import get_database_table_name
 
 def assign_data_type(element: Any) -> str:
     data_type = ''
@@ -43,7 +43,7 @@ def get_column_names_and_types() -> dict:
                 pass
         return names_and_types
 
-def create_database_main_table(connection: Connection) -> None:
+def create_database_table(connection: Connection) -> None:
     console_log('info', f"Creating {get_database_table_name()} in database")
     main_column_names_and_types = get_column_names_and_types()
 

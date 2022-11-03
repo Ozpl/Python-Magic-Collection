@@ -1,4 +1,4 @@
-from modules.database.database_functions import get_database_table_name
+from modules.database.functions import get_database_table_name
 from modules.globals import DEFAULT_SEARCH_COLUMNS
 
 QUERY_TRANSLATE = [
@@ -250,4 +250,5 @@ def construct_query(query_string = None) -> str:
     query = f'SELECT id FROM {table_name} '
 
     query += construct_query_when(query_string)
+    query += ' ORDER BY sort_key'
     return query

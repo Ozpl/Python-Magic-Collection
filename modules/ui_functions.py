@@ -1,15 +1,14 @@
+from ast import literal_eval
 from os import path
 from shutil import copyfileobj
 from sqlite3 import Connection
 from PyQt5.QtWidgets import QCheckBox, QComboBox, QLabel, QPlainTextEdit
 from re import compile
 from requests import get
-from modules.database.collections import add_card_to_collection, create_collection, get_all_collections_names_as_array, get_card_from_collection
-from modules.database.database_functions import create_sort_key_string, get_all_cards_from_pattern_as_joined_string, get_card_from_db, get_card_ids_list, get_database_table_name
+from modules.database.collections import add_card_to_collection, create_collection, format_collection_name, get_all_collections_names_as_array, get_card_from_collection
+from modules.database.functions import create_sort_key_string, get_all_cards_from_pattern_as_joined_string, get_card_from_db, get_card_ids_list, get_database_table_name
 from modules.logging import console_log
-from modules.database.query import construct_query
 from modules.globals import config
-from tqdm import tqdm
 
 #Global functions
 def download_image_if_not_downloaded(connection: Connection, id: str, image_extension: str) -> None:
@@ -17,11 +16,12 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
 
     if not path.exists(file_name):
         card = get_card_from_db(connection, id)
+        
         if card['image_uris']:
             image_uris = card['image_uris']
-        else:
-            #FIXME Handle card_faces and lack of image_uris
-            return
+        elif card['card_faces']:
+            image_uris = literal_eval(card['card_faces'])[0]['image_uris']
+            
         r = get(image_uris[config.get('COLLECTION', 'image_type')], stream = True)
         if r.status_code == 200:
             r.raw.decode_content = True
@@ -29,9 +29,15 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
                 copyfileobj(r.raw, f)
 
 #Corner widget
-def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox) -> None:
+def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox, current_collection: str) -> None:
     combo_box.clear()
-    combo_box.addItems(get_all_collections_names_as_array(connection))
+    items = get_all_collections_names_as_array(connection)
+    items_formatted = [format_collection_name(element) for element in items]
+    if current_collection in items_formatted:
+        if items_formatted.index(current_collection) == 0 and combo_box.count() > 1:
+            combo_box.setCurrentIndex(1)
+        combo_box.setCurrentIndex(items_formatted.index(current_collection))
+    combo_box.addItems(items)
 
 #Add cards tab
 def update_card_count_in_add_cards(connection: Connection, found_cards: list, current_row: int, label: QLabel) -> None:
@@ -116,6 +122,9 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
     cur = col_connection.cursor()
     cur.executemany(query, transaction)
     col_connection.commit()
+    
+    #TODO
+    #Refresh collection list in corner
     
     console_log('INFO', f'Transaction completed, created new collection "{collection_name}"')
 def split_line_to_list(card: str) -> list:

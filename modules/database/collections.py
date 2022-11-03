@@ -2,7 +2,7 @@ from string import ascii_letters, digits
 from sqlite3 import OperationalError
 from sqlite3 import Connection
 from modules.logging import console_log
-from modules.database.database_functions import format_card_values, query_get_table_columns
+from modules.database.functions import format_card_values, query_get_table_columns
 
 def create_collections_list(connection: Connection) -> None:
     query = '''CREATE TABLE IF NOT EXISTS collection_list (
@@ -70,9 +70,25 @@ def get_card_ids_from_collection(connection: Connection, collection_name: str) -
     record = cursor.fetchall()
 
     card_ids = [element[0] for element in record]
-    #card_ids.sort()
 
     return card_ids
+
+def get_cards_from_collection(connection: Connection, collection_name: str) -> dict:
+    query = f"SELECT id, regular, foil, tags FROM {collection_name} ORDER BY sort_key"
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
+    record = cursor.fetchall()
+
+    cards = {'id': [], 'regular': [], 'foil': [], 'tags': []}
+
+    cards['id'] = [element[0] for element in record]
+    cards['regular'] = [element[1] for element in record]
+    cards['foil'] = [element[2] for element in record]
+    cards['tags'] = [element[3] for element in record]
+
+    return cards
 
 def get_card_from_collection(connection: Connection, collection_name: str, id: str) -> dict:
     query = f"SELECT * FROM {collection_name} WHERE id = '{id}'"

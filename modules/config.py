@@ -55,6 +55,7 @@ class Config:
             'grid_number_of_rows': '3',
             'current_page': '1',
             'current_collection': 'maincollection',
+            'price_type': 'eur',
             'show_database': 'false'
         }
         self.save()

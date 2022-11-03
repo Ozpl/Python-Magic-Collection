@@ -2,8 +2,8 @@ from os import path
 from modules.api import get_data_from_scryfall
 from modules.globals import config
 from modules.database.collections import create_collections_list, create_collection
-from modules.database.create import create_database_main_table
-from modules.database.database_functions import create_connection, close_all_connections
+from modules.database.create import create_database_table
+from modules.database.functions import create_connection, close_all_connections
 from modules.database.load import database_load
 from modules.ui import create_user_interface
 
@@ -18,7 +18,7 @@ get_data_from_scryfall()
 #Manage cards database
 database_connection = create_connection(config.get('FILE', 'database'))
 if config.get_boolean('FLAG', 'database_was_created') or config.get_boolean('FLAG', 'downloaded_from_scryfall'):
-    create_database_main_table(database_connection)
+    create_database_table(database_connection)
     database_load(database_connection)
 
 #Manage collections database

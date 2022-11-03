@@ -4,7 +4,7 @@ from sqlite3 import Connection
 from tqdm import tqdm
 from modules.globals import DATABASE_INSERT_TO_MAIN
 from modules.globals import config
-from modules.database.database_functions import get_database_table_name, prepare_records_for_load_transaction
+from modules.database.functions import get_database_table_name, prepare_records_for_load_transaction
 from modules.logging import console_log
 
 def database_load(connection: Connection) -> None:

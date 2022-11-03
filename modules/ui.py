@@ -1,10 +1,11 @@
+from ast import literal_eval
 from math import floor
 from os import path
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtGui import QFont, QPalette, QPixmap
 from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
-from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection
-from modules.database.database_functions import get_card_from_db, get_card_ids_list, get_database_table_name
+from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection, get_cards_from_collection
+from modules.database.functions import get_card_from_db, get_card_ids_list, get_cards_ids_prices_list, get_database_table_name
 from modules.database.query import construct_query
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
 from modules.logging import console_log
@@ -13,9 +14,6 @@ from modules.ui_functions import add_card_to_collection_in_add_cards, download_i
 app = QApplication([])
 app_lyt = QVBoxLayout()
 tab_bar = QTabWidget()
-
-#TODO
-#QDoubleSpinBox as page controls
 
 last_width = 0
 last_height = 0
@@ -191,17 +189,16 @@ stt_lyt = QVBoxLayout()
 
 #Main
 def create_user_interface(db_connection, cl_connection, cd_connection):
-    global database_connection, collections_connection, cards_connection, cards_in_db, cards_in_collection, filtered_cards, add_cards_found_cards
+    global database_connection, collections_connection, cards_connection, database_cards, collection_cards, filtered_cards, add_cards_found_cards
     console_log('info', 'Creating UI')
 
     database_connection = db_connection
     collections_connection = cl_connection
     cards_connection = cd_connection
 
-    cards_in_db = get_card_ids_list(database_connection, f"SELECT id FROM {get_database_table_name()}")
-    cards_in_collection = get_card_ids_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
+    database_cards = get_cards_ids_prices_list(database_connection, config.get('COLLECTION', 'price_type'))
+    collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     filtered_cards = []
-    add_cards_found_cards = []
 
     ui = UI()
     ui.showMaximized()
@@ -256,7 +253,7 @@ class UI(QWidget):
         create_import_export_tab()
         create_settings_tab()
 
-        refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb)
+        refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, current_collection)
 
         app_lyt.addWidget(tab_bar)
         self.setLayout(app_lyt)
@@ -290,7 +287,9 @@ def add_collection_button_pressed():
     add_collection_window.line_edit.setText('')
 def current_collection_index_changed():
     config.set('COLLECTION', 'current_collection', format_collection_name(cor_lyt_cmb.currentText()))
+    #refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, config.get('COLLECTION', 'current_collection'))
     create_collection_tab_grid()
+
 #Collection
 def create_collection_tab():
     tab_bar.addTab(col, config.get('APP', 'collection'))
@@ -305,12 +304,23 @@ def create_collection_tab():
     [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_cmc]
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_slb)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbx)
+    col_lyt_crd_lyt_flt_lyt_sbx.editingFinished.connect(searchbox_editing_finished)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbu)
+    col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_button_pressed)
+    for element in col_lyt_crd_lyt_flt_lyt_clr:
+        element.setScaledContents(True)
+        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
+    for element in col_lyt_crd_lyt_flt_lyt_cmc:
+        element.setScaledContents(True)
+        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_tag)
     col_lyt_crd_lyt_tag.setLayout(col_lyt_crd_lyt_tag_lyt)
     col_lyt_crd_lyt_tag_lyt.addWidget(col_lyt_crd_lyt_tag_lyt_pag)
+    col_lyt_crd_lyt_tag_lyt_pag.setWrapping(False)
     col_lyt_crd_lyt_tag_lyt_pag.setDecimals(0)
     col_lyt_crd_lyt_tag_lyt_pag.setMinimum(1)
+    #TODO
+    #Set maximum value dynamically
     col_lyt_crd_lyt_tag_lyt_pag.setMaximum(999999)
     col_lyt_crd_lyt_tag_lyt_pag.valueChanged.connect(page_control_value_changed)
     col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
@@ -319,55 +329,38 @@ def create_collection_tab():
     col_lyt.addWidget(col_lyt_pre)
     col_lyt_pre.setLayout(col_lyt_pre_lyt)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_iml)
+    col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
+    pix = col_lyt_pre_lyt_iml_pix.scaled(373, 373, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    col_lyt_pre_lyt_iml.setPixmap(pix)
+    col_lyt_pre_lyt_inf.setWordWrap(True)
     col_lyt_pre_lyt_iml.setPixmap(col_lyt_pre_lyt_iml_pix)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_inf)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_des)
     col_lyt_pre_lyt_des.setReadOnly(True)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_tag)
 
-    create_collection_tab_filters()
-    create_collection_tab_grid()
-    create_collection_tab_preview()
-
     col_lyt_pre.setMinimumWidth(383)
     col_lyt_pre.setMaximumWidth(383)
-
     col_lyt_crd_lyt_flt.setMinimumHeight(65)
     col_lyt_crd_lyt_flt.setMaximumHeight(65)
     col_lyt_crd_lyt_flt_lyt_sbx.setMinimumWidth(125)
-
     col_lyt_crd_lyt_tag.setMinimumHeight(50)
     col_lyt_crd_lyt_tag.setMaximumHeight(50)
-    
     icon_size = col_lyt_crd_lyt_flt.height()-27 
     [element.setMaximumSize(icon_size, icon_size) for element in col_lyt_crd_lyt_flt_lyt_clr]
     [element.setMaximumSize(icon_size, icon_size) for element in col_lyt_crd_lyt_flt_lyt_cmc]
-#Collection -> Filters
-def create_collection_tab_filters():
-    for element in col_lyt_crd_lyt_flt_lyt_clr:
-        element.setScaledContents(True)
-        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
-
-    for element in col_lyt_crd_lyt_flt_lyt_cmc:
-        element.setScaledContents(True)
-        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
-
-    col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_pressed)
+    
+    create_collection_tab_grid()
 #Collection -> Filters -> Events
-def collection_filters_searchbox_pressed():
+def searchbox_editing_finished():
+    collection_filters_searchbox_button_pressed()
+def collection_filters_searchbox_button_pressed():
     global filtered_cards, last_width, last_height
+    
+    filtered_cards = []
+    
     if col_lyt_crd_lyt_flt_lyt_sbx.text():
-        filtered_cards = []
-        if config.get_boolean('COLLECTION', 'show_database'):
-            filtered_cards = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
-        else:
-            in_database = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
-            in_collection = get_card_ids_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
-            for element in in_collection:
-                if element in in_database:
-                    filtered_cards.append(element)
-    else:
-        filtered_cards = []
+        filtered_cards = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
         
     col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
     last_width = -1
@@ -383,8 +376,7 @@ def page_control_value_changed():
 #Collection -> Grid
 def create_collection_tab_grid():
     #Another approach? Get summed cards width in one row, subtract it from whole grid width and get spacing. If spacing is less than some value, then delete one card from row
-    global cards_to_display, last_width, last_height
-    cards_to_display = []
+    global filtered_cards, last_width, last_height
 
     current_grid_size = col_lyt_crd_lyt_grd.geometry().size()
 
@@ -437,26 +429,36 @@ def create_collection_tab_grid():
         for i in reversed(range(col_lyt_crd_lyt_grd_lyt.count())): 
             col_lyt_crd_lyt_grd_lyt.itemAt(i).widget().setParent(None)
 
+    
         #TODO
         #Set pagination here for filtered cards, when filter is on: set page to one and when the filter is off: return to previously viewed page
+        #FIXME
+        cards_to_display = []
+        
         if filtered_cards:
-            cards_to_display = filtered_cards
+            if config.get_boolean('COLLECTION', 'show_database'):
+                cards_to_display = filtered_cards
+            else:
+                for element in filtered_cards:
+                    if element in collection_cards['id']:
+                        cards_to_display.append(element)
         elif config.get_boolean('COLLECTION', 'show_database'):
-            cards_to_display = cards_in_db
+            cards_to_display = database_cards['id']
         else:
-            cards_to_display = cards_in_collection
+            cards_to_display = collection_cards['id']
 
         current_page = config.get_int('COLLECTION', 'current_page')
         starting_index = (current_page - 1) * cards_on_grid
         ending_index = (current_page - 1) * cards_on_grid + cards_on_grid
 
-        for id in cards_to_display[starting_index:ending_index]:
-            card = get_card_from_db(database_connection, id)
+        for card in cards_to_display[starting_index:ending_index]:
+            card_db = get_card_from_db(database_connection, card)
             #FIXME what if card doesn't have image_uris
-            image_uris = card['image_uris']
-            if image_uris:
-                [download_image_if_not_downloaded(database_connection, card['id'], image_extension) for element in image_uris if element == config.get('COLLECTION', 'image_type')]
-
+            if card_db['image_uris']:
+                [download_image_if_not_downloaded(database_connection, card_db['id'], image_extension) for element in card_db['image_uris'] if element == config.get('COLLECTION', 'image_type')]
+            elif card_db['card_faces']:
+                card_faces = literal_eval(card_db['card_faces'])
+                [download_image_if_not_downloaded(database_connection, card_db['id'], image_extension) for element in card_faces[0]['image_uris'] if element == config.get('COLLECTION', 'image_type')]
         x = 1
         y = 1
         for i in range(starting_index, ending_index):
@@ -469,8 +471,29 @@ def create_collection_tab_grid():
                 temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[i]}.{image_extension}")
                 imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 iml.setPixmap(imp)
+                iml.setAlignment(Qt.AlignCenter)
                 col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
-                
+                                                    
+                if cards_to_display[i] in collection_cards['id']:
+                    crd_idx = collection_cards['id'].index(cards_to_display[i])
+                    db_idx = database_cards['id'].index(cards_to_display[i])
+                    
+                    price_str = database_cards['prices_regular'][db_idx] if database_cards['prices_regular'][db_idx] is not None else database_cards['prices_foil'][db_idx]
+                    if price_str:
+                        if config.get('COLLECTION', 'price_type') == 'eur': price_str += '€'
+                        elif config.get('COLLECTION', 'price_type') == 'usd': price_str += '$'
+                        elif config.get('COLLECTION', 'price_type') == 'tix': price_str += 'TIX'
+                    else:
+                        price_str = 'N/A'
+                    
+                    lbl = QLabel(f"{collection_cards['regular'][crd_idx]} / {collection_cards['foil'][crd_idx]} ({collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]}) - {price_str}")
+                    lbl.setAlignment(Qt.AlignHCenter)
+                    col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
+                else:
+                    lbl = QLabel(f"Not collected")
+                    lbl.setAlignment(Qt.AlignHCenter)
+                    col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
+                    
                 if x % cards_in_row != 0:
                     x = x + 1
                 else:
@@ -479,12 +502,6 @@ def create_collection_tab_grid():
 
     last_width = cards_in_row
     last_height = cards_in_col
-#Collection -> Preview
-def create_collection_tab_preview():
-    col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
-    pix = col_lyt_pre_lyt_iml_pix.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-    col_lyt_pre_lyt_iml.setPixmap(pix)
-    col_lyt_pre_lyt_inf.setWordWrap(True)
 
 #Decks
 def create_decks_tab():
