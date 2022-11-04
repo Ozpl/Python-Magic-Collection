@@ -2,7 +2,7 @@ from ast import literal_eval
 from math import floor
 from os import path
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QPalette, QPixmap
+from PyQt5.QtGui import QFont, QPixmap
 from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
 from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection, get_cards_from_collection
 from modules.database.functions import get_card_from_db, get_card_ids_list, get_cards_ids_prices_list, get_database_table_name
@@ -38,9 +38,11 @@ widget_hierarchy = [
                         {'name': 'col_lyt_crd_lyt_flt_lyt_slb', 'type': 'QLabel'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_sbx', 'type': 'QLineEdit'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_sbu', 'type': 'QPushButton'},
+                        {'name': 'col_lyt_crd_lyt_flt_lyt_sbc', 'type': 'QPushButton'},
                 {'name': 'col_lyt_crd_lyt_tag', 'type': 'QGroupBox'},
                     {'name': 'col_lyt_crd_lyt_tag_lyt', 'type': 'QHBoxLayout'},
                         {'name': 'col_lyt_crd_lyt_tag_lyt_pag', 'type': 'QDoubleSpinBox'},
+                        {'name': 'col_lyt_crd_lyt_tag_lyt_inf', 'type': 'QLabel'},
                 {'name': 'col_lyt_crd_lyt_grd', 'type': 'QGroupBox'},
                     {'name': 'col_lyt_crd_lyt_grd_lyt', 'type': 'QGridLayout'},
                         #Inside col_lyt_crd_lyt_grd_lyt
@@ -122,11 +124,13 @@ col_lyt_crd_lyt_flt_lyt_and = QRadioButton('And')
 col_lyt_crd_lyt_flt_lyt_orr = QRadioButton('Or')
 col_lyt_crd_lyt_flt_lyt_cmc = [QLabel('0'), QLabel('1'), QLabel('2'), QLabel('3'), QLabel('4'), QLabel('5'), QLabel('6'), QLabel('7'), QLabel('8'), QLabel('9')]
 col_lyt_crd_lyt_flt_lyt_slb = QLabel('Search cards:')
-col_lyt_crd_lyt_flt_lyt_sbx = QLineEdit('thassa')
+col_lyt_crd_lyt_flt_lyt_sbx = QLineEdit('')
 col_lyt_crd_lyt_flt_lyt_sbu = QPushButton('Search')
+col_lyt_crd_lyt_flt_lyt_sbc = QPushButton('Clear')
 col_lyt_crd_lyt_tag = QGroupBox()
 col_lyt_crd_lyt_tag_lyt = QHBoxLayout()
 col_lyt_crd_lyt_tag_lyt_pag = QDoubleSpinBox()
+col_lyt_crd_lyt_tag_lyt_inf = QLabel('Found 0 cards and there are 0 pages.')
 col_lyt_crd_lyt_grd = QGroupBox()
 col_lyt_crd_lyt_grd_lyt = QGridLayout()
 col_lyt_crd_lyt_grd_lyt_crd = [] #[QGroupBox]
@@ -149,7 +153,7 @@ add_lyt_gbx_lyt = QHBoxLayout()
 add_lyt_gbx_lyt_src = QGroupBox()
 add_lyt_gbx_lyt_src_lyt = QVBoxLayout()
 add_lyt_gbx_lyt_src_lyt_lbl = QLabel('Type name of searched card:')
-add_lyt_gbx_lyt_src_lyt_sbx = QLineEdit('Thassa')
+add_lyt_gbx_lyt_src_lyt_sbx = QLineEdit('')
 add_lyt_gbx_lyt_src_lyt_but = QPushButton('Search')
 add_lyt_gbx_lyt_lst = QListWidget()
 add_lyt_gbx_lyt_res = QGroupBox()
@@ -205,6 +209,50 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
     #ui.show()
     app.exec()
 
+#UI Class and its Events
+class UI(QWidget):
+    def __init__(self, parent=None) -> None:
+        super(UI, self).__init__(parent)
+
+        #globals from config.ini
+        global image_extension
+        
+        if path.exists('config.ini'):
+            if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
+            else: image_extension = 'jpg'
+
+        create_corner_widget()
+        create_collection_tab()
+        create_decks_tab()
+        create_add_cards_tab()
+        create_wishlist_tab()
+        create_import_export_tab()
+        create_settings_tab()
+
+        refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, config.get('COLLECTION', 'current_collection'))
+
+        app_lyt.addWidget(tab_bar)
+        self.setLayout(app_lyt)
+        
+        self.app_font = QFont(config.get('APP', 'font'), config.get_int('APP', 'font_size'))
+        self.setFont(self.app_font)
+        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
+        QApplication.setStyle(config.get('APP', 'style'))
+
+    def resizeEvent(self, event) -> None:
+        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
+        #update_sizes_of_cards_in_grid()
+        create_collection_tab_grid()
+        QWidget.resizeEvent(self, event)
+        
+    def keyPressEvent(self, event) -> None:
+        #FIXME
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers == Qt.ControlModifier and event.key() == Qt.Key_Enter:
+            col_lyt_crd_lyt_flt_lyt_sbx.setFocus()
+        event.accept()
+        QWidget.keyPressEvent(self, event)
+
 #AddWindow Class
 class AddCollectionWindow(QWidget):
     def __init__(self, parent=None):
@@ -230,45 +278,6 @@ class AddCollectionWindow(QWidget):
         #Add window prompt - succesful or not
         self.close()
 
-#UI Class and its Events
-class UI(QWidget):
-    def __init__(self, parent=None) -> None:
-        super(UI, self).__init__(parent)
-
-        #globals from config.ini
-        global image_extension, current_page, cards_per_page, current_collection
-        if path.exists('config.ini'):
-            if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
-            else: image_extension = 'jpg'
-
-            current_collection = config.get('COLLECTION', 'current_collection')
-            current_page = config.get_int('COLLECTION', 'current_page')
-            cards_per_page = config.get_int('COLLECTION', 'grid_number_of_cards')
-
-        create_corner_widget()
-        create_collection_tab()
-        create_decks_tab()
-        create_add_cards_tab()
-        create_wishlist_tab()
-        create_import_export_tab()
-        create_settings_tab()
-
-        refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, current_collection)
-
-        app_lyt.addWidget(tab_bar)
-        self.setLayout(app_lyt)
-        
-        self.app_font = QFont(config.get('APP', 'font'), config.get_int('APP', 'font_size'))
-        self.setFont(self.app_font)
-        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
-        QApplication.setStyle(config.get('APP', 'style'))
-
-    def resizeEvent(self, event) -> None:
-        self.setWindowTitle(f"{config.get('APP', 'name')} - X:{self.x()}, Y:{self.y()}, W:{self.width()}, H:{self.height()}")
-        #update_sizes_of_cards_in_grid()
-        create_collection_tab_grid()
-        QWidget.resizeEvent(self, event)
-
 #Corner
 def create_corner_widget():
     cor.setMinimumHeight(40)
@@ -286,9 +295,20 @@ def add_collection_button_pressed():
     add_collection_window.show()
     add_collection_window.line_edit.setText('')
 def current_collection_index_changed():
-    config.set('COLLECTION', 'current_collection', format_collection_name(cor_lyt_cmb.currentText()))
-    #refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, config.get('COLLECTION', 'current_collection'))
-    create_collection_tab_grid()
+    if not config.get_boolean('FLAG', 'corner_refreshing'):
+        global last_width, last_height, collection_cards, filtered_cards
+        
+        collection_name = format_collection_name(cor_lyt_cmb.currentText())
+        config.set('COLLECTION', 'current_collection', collection_name)
+        refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, collection_name)
+        
+        col_lyt_crd_lyt_flt_lyt_sbx.setText('')
+        
+        collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
+        filtered_cards = []
+        last_width = -1
+        last_height = -1
+        create_collection_tab_grid()
 
 #Collection
 def create_collection_tab():
@@ -307,6 +327,8 @@ def create_collection_tab():
     col_lyt_crd_lyt_flt_lyt_sbx.editingFinished.connect(searchbox_editing_finished)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbu)
     col_lyt_crd_lyt_flt_lyt_sbu.clicked.connect(collection_filters_searchbox_button_pressed)
+    col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbc)
+    col_lyt_crd_lyt_flt_lyt_sbc.clicked.connect(searchbox_clear_button_pressed)
     for element in col_lyt_crd_lyt_flt_lyt_clr:
         element.setScaledContents(True)
         element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
@@ -319,28 +341,28 @@ def create_collection_tab():
     col_lyt_crd_lyt_tag_lyt_pag.setWrapping(False)
     col_lyt_crd_lyt_tag_lyt_pag.setDecimals(0)
     col_lyt_crd_lyt_tag_lyt_pag.setMinimum(1)
-    #TODO
-    #Set maximum value dynamically
-    col_lyt_crd_lyt_tag_lyt_pag.setMaximum(999999)
+    col_lyt_crd_lyt_tag_lyt_pag.setMaximum(99999)
     col_lyt_crd_lyt_tag_lyt_pag.valueChanged.connect(page_control_value_changed)
     col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
+    col_lyt_crd_lyt_tag_lyt.addWidget(col_lyt_crd_lyt_tag_lyt_inf)
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_grd)
     col_lyt_crd_lyt_grd.setLayout(col_lyt_crd_lyt_grd_lyt)
     col_lyt.addWidget(col_lyt_pre)
     col_lyt_pre.setLayout(col_lyt_pre_lyt)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_iml)
     col_lyt_pre_lyt_iml_pix = QPixmap(f'images/muldrotha_normal.jpg')
-    pix = col_lyt_pre_lyt_iml_pix.scaled(373, 373, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    col_lyt_pre_lyt_iml.setMaximumHeight(600)
+    pix = col_lyt_pre_lyt_iml_pix.scaled(600, 600, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    col_lyt_pre_lyt_iml.setPixmap(col_lyt_pre_lyt_iml_pix)
     col_lyt_pre_lyt_iml.setPixmap(pix)
     col_lyt_pre_lyt_inf.setWordWrap(True)
-    col_lyt_pre_lyt_iml.setPixmap(col_lyt_pre_lyt_iml_pix)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_inf)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_des)
     col_lyt_pre_lyt_des.setReadOnly(True)
     col_lyt_pre_lyt.addWidget(col_lyt_pre_lyt_tag)
 
-    col_lyt_pre.setMinimumWidth(383)
-    col_lyt_pre.setMaximumWidth(383)
+    col_lyt_pre.setMinimumWidth(458)
+    col_lyt_pre.setMaximumWidth(458)
     col_lyt_crd_lyt_flt.setMinimumHeight(65)
     col_lyt_crd_lyt_flt.setMaximumHeight(65)
     col_lyt_crd_lyt_flt_lyt_sbx.setMinimumWidth(125)
@@ -363,6 +385,15 @@ def collection_filters_searchbox_button_pressed():
         filtered_cards = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
         
     col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
+    last_width = -1
+    last_height = -1
+    col_lyt_crd_lyt_tag_lyt_pag.setFocus()
+    col_lyt_crd_lyt_tag_lyt_pag.selectAll()
+    create_collection_tab_grid()
+def searchbox_clear_button_pressed():
+    global filtered_cards, last_width, last_height
+    col_lyt_crd_lyt_flt_lyt_sbx.clear()
+    filtered_cards = []
     last_width = -1
     last_height = -1
     create_collection_tab_grid()
@@ -407,21 +438,6 @@ def create_collection_tab_grid():
     number_of_vertical_spacings = (cards_in_col - 1)
     spacing_vertical = vertical_space_left / number_of_vertical_spacings
 
-    #debug
-    '''
-    col_lyt_pre_lyt_inf.setText(
-        f"""in row: {cards_in_row}, in col: {cards_in_col}\n
-        current_grid_size.width() / card_width: {current_grid_size.width() / card_width}\n
-        width: {card_width}, height: {card_height}\n
-        current_grid_size: {current_grid_size.width()}, {current_grid_size.height()}\n
-        grid_width: {grid_width}\n
-        total_cards_width: {total_cards_width}\n
-        horizontal_space_left: {horizontal_space_left}\n
-        number_of_horizontal_spacings: {number_of_horizontal_spacings}\n
-        spacing_horizontal: {spacing_vertical}
-        """)
-    '''
-
     if spacing_horizontal < 15: cards_in_row = cards_in_row - 1
     if spacing_vertical < 23: cards_in_col = cards_in_col - 1
     
@@ -451,6 +467,12 @@ def create_collection_tab_grid():
         starting_index = (current_page - 1) * cards_on_grid
         ending_index = (current_page - 1) * cards_on_grid + cards_on_grid
 
+        if len(cards_to_display) % cards_on_grid == 0:
+            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid)
+        else:
+            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid + 1)
+        col_lyt_crd_lyt_tag_lyt_inf.setText(f'Found {len(cards_to_display)} cards and there are {int(col_lyt_crd_lyt_tag_lyt_pag.maximum())} pages.')
+        
         for card in cards_to_display[starting_index:ending_index]:
             card_db = get_card_from_db(database_connection, card)
             #FIXME what if card doesn't have image_uris
@@ -471,7 +493,10 @@ def create_collection_tab_grid():
                 temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[i]}.{image_extension}")
                 imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 iml.setPixmap(imp)
+                #TODO
+                #align bottom center?
                 iml.setAlignment(Qt.AlignCenter)
+                iml.setStyleSheet("background-color: gainsboro")
                 col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
                                                     
                 if cards_to_display[i] in collection_cards['id']:
@@ -485,8 +510,10 @@ def create_collection_tab_grid():
                         elif config.get('COLLECTION', 'price_type') == 'tix': price_str += 'TIX'
                     else:
                         price_str = 'N/A'
-                    
-                    lbl = QLabel(f"{collection_cards['regular'][crd_idx]} / {collection_cards['foil'][crd_idx]} ({collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]}) - {price_str}")
+                    #TODO
+                    #align image
+                    lbl_text = f"{collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]} (R:{collection_cards['regular'][crd_idx]} F:{collection_cards['foil'][crd_idx]}) - {price_str}"
+                    lbl = QLabel(lbl_text)
                     lbl.setAlignment(Qt.AlignHCenter)
                     col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
                 else:

@@ -61,6 +61,16 @@ def get_all_collections_names_as_array(connection: Connection) -> list:
 
     return collection_names
 
+def get_collections_formatted_name(connection: Connection, collection_name: str) -> list:
+    query = f"SELECT formatted_name FROM collection_list WHERE name = {collection_name}"
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    connection.commit()
+    record = cursor.fetchone()
+    
+    return record[0]
+
 def get_card_ids_from_collection(connection: Connection, collection_name: str) -> list:
     query = f"SELECT id FROM {collection_name} ORDER BY sort_key"
 

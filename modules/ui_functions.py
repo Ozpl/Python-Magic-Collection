@@ -30,14 +30,16 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
 
 #Corner widget
 def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox, current_collection: str) -> None:
+    config.set('FLAG', 'corner_refreshing', 'true')
     combo_box.clear()
     items = get_all_collections_names_as_array(connection)
     items_formatted = [format_collection_name(element) for element in items]
+    combo_box.addItems(items)
     if current_collection in items_formatted:
         if items_formatted.index(current_collection) == 0 and combo_box.count() > 1:
             combo_box.setCurrentIndex(1)
         combo_box.setCurrentIndex(items_formatted.index(current_collection))
-    combo_box.addItems(items)
+    config.set('FLAG', 'corner_refreshing', 'false')
 
 #Add cards tab
 def update_card_count_in_add_cards(connection: Connection, found_cards: list, current_row: int, label: QLabel) -> None:

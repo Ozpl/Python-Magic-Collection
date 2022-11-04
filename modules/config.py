@@ -14,7 +14,8 @@ class Config:
             'downloaded_from_scryfall': 'false',
             'database_was_created': 'false',
             'collections_was_created': 'false',
-            'decks_was_created': 'false'
+            'decks_was_created': 'false',
+            'corner_refreshing': 'false'
         }
         self.config_parser['FOLDER'] = {
             'database': 'database',
@@ -50,13 +51,11 @@ class Config:
             'settings': 'Settings'
         }
         self.config_parser['COLLECTION'] = {
+            'show_database': 'false',
             'image_type': 'normal',
-            'grid_number_of_cards': '18',
-            'grid_number_of_rows': '3',
-            'current_page': '1',
-            'current_collection': 'maincollection',
             'price_type': 'eur',
-            'show_database': 'false'
+            'current_collection': 'maincollection',
+            'current_page': '1'
         }
         self.save()
         self.load()

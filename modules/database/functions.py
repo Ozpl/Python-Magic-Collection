@@ -163,12 +163,17 @@ def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
             cards['prices_foil'].append(prices['eur_foil'])
         elif price_type == 'usd':
             if prices['usd_etched']:
+                if prices['usd']:
+                    cards['prices_regular'].append(prices['usd'])
+                else:
+                    cards['prices_regular'].append(None)
                 cards['prices_foil'].append(prices['usd_etched'])
             else:
                 cards['prices_regular'].append(prices['usd'])
                 cards['prices_foil'].append(prices['usd_foil'])
         elif price_type == 'tix':
             cards['prices_regular'].append(prices['tix'])
+            cards['prices_foil'].append(None)
     
     return cards
 
