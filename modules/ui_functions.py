@@ -1,17 +1,15 @@
-from ast import literal_eval
-from os import path
-from shutil import copyfileobj
 from sqlite3 import Connection
 from PyQt5.QtWidgets import QCheckBox, QComboBox, QLabel, QPlainTextEdit
-from re import compile
-from requests import get
-from modules.database.collections import add_card_to_collection, create_collection, format_collection_name, get_all_collections_names_as_array, get_card_from_collection
-from modules.database.functions import create_sort_key_string, get_all_cards_from_pattern_as_joined_string, get_card_from_db, get_card_ids_list, get_database_table_name
-from modules.logging import console_log
 from modules.globals import config
 
 #Global functions
 def download_image_if_not_downloaded(connection: Connection, id: str, image_extension: str) -> None:
+    from ast import literal_eval
+    from os import path
+    from shutil import copyfileobj
+    from requests import get
+    from modules.database.functions import get_card_from_db
+    
     file_name = f"{config.get('FOLDER', 'cards')}/{id}.{image_extension}"
 
     if not path.exists(file_name):
@@ -30,6 +28,8 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
 
 #Corner widget
 def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox, current_collection: str) -> None:
+    from modules.database.collections import format_collection_name, get_all_collections_names_as_array
+    
     config.set('FLAG', 'corner_refreshing', 'true')
     combo_box.clear()
     items = get_all_collections_names_as_array(connection)
@@ -43,10 +43,14 @@ def refresh_collection_names_in_corner(connection: Connection, combo_box: QCombo
 
 #Add cards tab
 def update_card_count_in_add_cards(connection: Connection, found_cards: list, current_row: int, label: QLabel) -> None:
+    from modules.database.collections import get_card_from_collection
     selected_card = get_card_from_collection(connection, config.get('COLLECTION', 'current_collection'), found_cards[current_row])
 
     label.setText(f"You currently have {selected_card['regular']} regulars and {selected_card['foil']} foils in collection")
 def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection: Connection, found_cards: list, sorted_list: list, current_row: int, regular: int, foil: int, mode: str) -> None:
+    from modules.database.collections import add_card_to_collection
+    from modules.database.functions import create_sort_key_string, get_card_from_db
+    
     add_card_to_collection(
         cl_connection,
         config.get('COLLECTION', 'current_collection'), 
@@ -59,6 +63,11 @@ def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection
 
 #Import/export tab
 def process_import_list(db_connection: Connection, col_connection: Connection, import_list: list, pattern: str, results_plaintextedit: QPlainTextEdit, errors_plaintextedit: QPlainTextEdit, header_checkbox: QCheckBox) -> None:
+    from modules.database.collections import create_collection
+    from modules.database.functions import get_all_cards_from_pattern_as_joined_string, get_card_ids_list, get_database_table_name
+    from modules.logging import console_log
+    
+    
     console_log('INFO', 'Importing has started')
     
     results_plaintextedit.setPlainText('')
@@ -147,6 +156,8 @@ def split_line_to_list(card: str) -> list:
     split_card.append(card[last_index:])
     return split_card
 def handle_names_and_sets_exceptions(split_card: dict) -> dict:
+    import re
+    
     names = [
         ' (Showcase)',
         ' (Borderless)' ,
@@ -166,13 +177,12 @@ def handle_names_and_sets_exceptions(split_card: dict) -> dict:
     sets = [
         ' Variants'
     ]
-
-    #FIXME
-    #Pattern is never matched, even though there are cards like 'Plains (79)' or 'Mountain (36)'
-    pattern = r' \(\d+\)'
-    re = compile(pattern)
-    if re.match(split_card['%n']) is not None:
-        re.sub(pattern, '', split_card['%n'])
+    
+    full_pattern = r'.* \(\d+\)'
+    parenthesis = r' \(\d+\)'
+    regex = re.compile(full_pattern)
+    if regex.match(split_card['%n']) is not None:
+        split_card['%n'] = re.sub(parenthesis, '', split_card['%n'])
     
     for element in names:
         if element in split_card['%n']:

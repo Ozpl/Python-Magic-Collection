@@ -1,14 +1,7 @@
-from ast import literal_eval
-from math import floor
-from os import path
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QPixmap
-from PyQt5.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
-from modules.database.collections import create_collection, format_collection_name, get_card_ids_from_collection, get_cards_from_collection
-from modules.database.functions import get_card_from_db, get_card_ids_list, get_cards_ids_prices_list, get_database_table_name
-from modules.database.query import construct_query
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QFont, QPixmap
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
-from modules.logging import console_log
 from modules.ui_functions import add_card_to_collection_in_add_cards, download_image_if_not_downloaded, process_import_list, refresh_collection_names_in_corner, update_card_count_in_add_cards
 
 app = QApplication([])
@@ -193,6 +186,9 @@ stt_lyt = QVBoxLayout()
 
 #Main
 def create_user_interface(db_connection, cl_connection, cd_connection):
+    from modules.database.collections import get_cards_from_collection
+    from modules.database.functions import get_cards_ids_prices_list
+    from modules.logging import console_log
     global database_connection, collections_connection, cards_connection, database_cards, collection_cards, filtered_cards, add_cards_found_cards
     console_log('info', 'Creating UI')
 
@@ -212,6 +208,7 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
 #UI Class and its Events
 class UI(QWidget):
     def __init__(self, parent=None) -> None:
+        from os import path
         super(UI, self).__init__(parent)
 
         #globals from config.ini
@@ -248,7 +245,7 @@ class UI(QWidget):
     def keyPressEvent(self, event) -> None:
         #FIXME
         modifiers = QApplication.keyboardModifiers()
-        if modifiers == Qt.ControlModifier and event.key() == Qt.Key_Enter:
+        if modifiers == Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Enter:
             col_lyt_crd_lyt_flt_lyt_sbx.setFocus()
         event.accept()
         QWidget.keyPressEvent(self, event)
@@ -273,6 +270,7 @@ class AddCollectionWindow(QWidget):
         self.setLayout(layout)
 
     def confirm_button_pressed(self):
+        from modules.database.collections import create_collection
         create_collection(collections_connection, self.line_edit.text())
         refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb)
         #Add window prompt - succesful or not
@@ -295,6 +293,7 @@ def add_collection_button_pressed():
     add_collection_window.show()
     add_collection_window.line_edit.setText('')
 def current_collection_index_changed():
+    from modules.database.collections import format_collection_name, get_cards_from_collection
     if not config.get_boolean('FLAG', 'corner_refreshing'):
         global last_width, last_height, collection_cards, filtered_cards
         
@@ -377,6 +376,8 @@ def create_collection_tab():
 def searchbox_editing_finished():
     collection_filters_searchbox_button_pressed()
 def collection_filters_searchbox_button_pressed():
+    from modules.database.functions import get_card_ids_list
+    from modules.database.query import construct_query
     global filtered_cards, last_width, last_height
     
     filtered_cards = []
@@ -406,6 +407,9 @@ def page_control_value_changed():
     create_collection_tab_grid()
 #Collection -> Grid
 def create_collection_tab_grid():
+    from ast import literal_eval
+    from math import floor
+    from modules.database.functions import get_card_from_db
     #Another approach? Get summed cards width in one row, subtract it from whole grid width and get spacing. If spacing is less than some value, then delete one card from row
     global filtered_cards, last_width, last_height
 
@@ -465,9 +469,13 @@ def create_collection_tab_grid():
 
         current_page = config.get_int('COLLECTION', 'current_page')
         starting_index = (current_page - 1) * cards_on_grid
+        if starting_index < 0: starting_index = 0
         ending_index = (current_page - 1) * cards_on_grid + cards_on_grid
+        if ending_index < 0: ending_index = 0
 
-        if len(cards_to_display) % cards_on_grid == 0:
+        if len(cards_to_display) == 0:
+            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(1)
+        elif len(cards_to_display) % cards_on_grid == 0:
             col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid)
         else:
             col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid + 1)
@@ -475,7 +483,6 @@ def create_collection_tab_grid():
         
         for card in cards_to_display[starting_index:ending_index]:
             card_db = get_card_from_db(database_connection, card)
-            #FIXME what if card doesn't have image_uris
             if card_db['image_uris']:
                 [download_image_if_not_downloaded(database_connection, card_db['id'], image_extension) for element in card_db['image_uris'] if element == config.get('COLLECTION', 'image_type')]
             elif card_db['card_faces']:
@@ -487,6 +494,8 @@ def create_collection_tab_grid():
             if i > len(cards_to_display) - 1:
                 pass
             else:
+                #TODO
+                #Flip a card indicator when it has faces
                 iml = QLabel()
                 iml.setObjectName('image')
                 iml.setStyleSheet("margin:5px")
@@ -495,7 +504,7 @@ def create_collection_tab_grid():
                 iml.setPixmap(imp)
                 #TODO
                 #align bottom center?
-                iml.setAlignment(Qt.AlignCenter)
+                iml.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 iml.setStyleSheet("background-color: gainsboro")
                 col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
                                                     
@@ -514,11 +523,11 @@ def create_collection_tab_grid():
                     #align image
                     lbl_text = f"{collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]} (R:{collection_cards['regular'][crd_idx]} F:{collection_cards['foil'][crd_idx]}) - {price_str}"
                     lbl = QLabel(lbl_text)
-                    lbl.setAlignment(Qt.AlignHCenter)
+                    lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
                     col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
                 else:
                     lbl = QLabel(f"Not collected")
-                    lbl.setAlignment(Qt.AlignHCenter)
+                    lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
                     col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
                     
                 if x % cards_in_row != 0:
@@ -544,6 +553,7 @@ def create_add_cards_tab():
     add_lyt_gbx_lyt_src.setLayout(add_lyt_gbx_lyt_src_lyt)
     add_lyt_gbx_lyt_src_lyt.addWidget(add_lyt_gbx_lyt_src_lyt_lbl)
     add_lyt_gbx_lyt_src_lyt.addWidget(add_lyt_gbx_lyt_src_lyt_sbx)
+    add_lyt_gbx_lyt_src_lyt_sbx.editingFinished.connect(add_cards_search_button_pressed)
     add_lyt_gbx_lyt_src_lyt.addWidget(add_lyt_gbx_lyt_src_lyt_but)
     add_lyt_gbx_lyt_src_lyt_but.clicked.connect(add_cards_search_button_pressed)
     add_lyt_gbx_lyt.addWidget(add_lyt_gbx_lyt_lst)
@@ -564,6 +574,8 @@ def create_add_cards_tab():
     add_lyt_gbx_lyt_res_lyt_iml.setMaximumSize(int(cards_height * 0.72), cards_height)
 #Add cards -> Search -> Events
 def add_cards_search_button_pressed():
+    from modules.database.functions import get_card_from_db, get_card_ids_list
+    from modules.database.query import construct_query
     global add_cards_found_cards, add_cards_sorted_list
     add_cards_found_cards = get_card_ids_list(database_connection, construct_query(f'name:"{add_lyt_gbx_lyt_src_lyt_sbx.text()}"'))
     
@@ -585,9 +597,11 @@ def add_cards_search_button_pressed():
     add_cards_found_cards = list(map(lambda d: d['id'], add_cards_sorted_list))
 
     add_lyt_gbx_lyt_lst.addItems(list(map(lambda d: d['display'], add_cards_sorted_list)))
+    add_lyt_gbx_lyt_lst.setFocus()
+    add_lyt_gbx_lyt_lst.setCurrentRow(add_lyt_gbx_lyt_lst.count()-1)
 #Add cards -> List -> Events
 def add_cards_list_selection_changed():
-    current_index = add_lyt_gbx_lyt_lst.currentRow()
+    current_index = add_lyt_gbx_lyt_lst.currentRow() if add_lyt_gbx_lyt_lst.currentRow() <= len(add_cards_found_cards)-1 else len(add_cards_found_cards)-1
     download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], image_extension)
     file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
     pix = QPixmap(file_name)
@@ -596,6 +610,7 @@ def add_cards_list_selection_changed():
     update_card_count_in_add_cards(collections_connection, add_cards_found_cards, current_index, add_lyt_gbx_lyt_res_lyt_lbl)
 #Add cards -> Regular -> Events
 def add_regular_button_pressed():
+    from modules.database.collections import get_card_ids_from_collection
     global cards_in_collection
     current_index = add_lyt_gbx_lyt_lst.currentRow()
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 1, 0, 'add')
@@ -604,6 +619,7 @@ def add_regular_button_pressed():
     create_collection_tab_grid()
 #Add cards -> Foil -> Events
 def add_foil_button_pressed():
+    from modules.database.collections import get_card_ids_from_collection
     global cards_in_collection
     current_index = add_lyt_gbx_lyt_lst.currentRow()
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 0, 1, 'add')
@@ -650,6 +666,7 @@ def create_import_export_tab():
 def import_button_pressed():
     import_list = imp_lyt_gbx_lyt_inp_lyt_lin.toPlainText().splitlines()
     process_import_list(database_connection, collections_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr, imp_lyt_gbx_lyt_par_lyt_inp, imp_lyt_gbx_lyt_par_lyt_chk)
+    refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, config.get('COLLECTION', 'current_collection'))
 def pattern_combobox_index_changed():
     i = imp_lyt_gbx_lyt_par_lyt_cmb.currentIndex()
     TEMPLATE_PATTERNS

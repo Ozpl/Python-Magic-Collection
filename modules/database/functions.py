@@ -1,4 +1,3 @@
-from ast import literal_eval
 from sqlite3 import connect, Connection, Error
 from modules.globals import config, DATABASE_INSERT_TO_MAIN
 
@@ -42,8 +41,8 @@ def prepare_records_for_load_transaction(card: dict, main: list) -> None:
 
 def sort_key_colors_mapping(array: list, color_map: dict) -> str:
     '''Helper function to sort_key generation, used for assigning numeral value to given color combination.'''
-    found_colors = 0
     for element in color_map:
+        found_colors = 0
         for char in element:
             if char in array:
                 found_colors = found_colors + 1
@@ -52,40 +51,90 @@ def sort_key_colors_mapping(array: list, color_map: dict) -> str:
             else:
                 found_colors = 0
                 continue
-    return '32'
+    return '35'
 
 def create_sort_key_string(card: dict) -> str:
     '''Create sort_key string, to properly sort cards in collection by its value.'''
-    sort_key = ''
+    sort_key = ''        
     
-    #TODO
-    #Set another value for lands: mana_produced
+    color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
+    color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
+    color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WBR': '24', 'UBG': '25' }
+    color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
+    
+    colors_flag = False
+    #Colors for double cards
     try:
-        color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
-        color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
-        color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WBR': '24', 'UBG': '25' }
-        color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
-
-        match (len(card['colors'])):
-            case 1: sort_key = sort_key_colors_mapping(card['colors'], color_map_one)
-            case 2: sort_key = sort_key_colors_mapping(card['colors'], color_map_two)
-            case 3: sort_key = sort_key_colors_mapping(card['colors'], color_map_three)
-            case 4: sort_key = sort_key_colors_mapping(card['colors'], color_map_four)
+        colors = []
+        if card['card_faces']:
+            if card['card_faces'][0]['colors']:
+                for color in card['card_faces'][0]['colors']:
+                    colors.append(color)
+            colors = list(set(colors))
+            
+        match (len(colors)):
+            case 1: sort_key = sort_key_colors_mapping(colors, color_map_one)
+            case 2: sort_key = sort_key_colors_mapping(colors, color_map_two)
+            case 3: sort_key = sort_key_colors_mapping(colors, color_map_three)
+            case 4: sort_key = sort_key_colors_mapping(colors, color_map_four)
             case 5: sort_key = '31'
             case 0: sort_key = '32'
         if 'Basic' in card['type_line']: sort_key = '33'
         elif 'Land' in card['type_line']: sort_key = '34'
+        colors_flag = True
     except KeyError:
         sort_key = '35'
+        
+    #Colors
+    if not colors_flag:
+        try:
+            colors = card['colors']
+            match (len(colors)):
+                case 1: sort_key = sort_key_colors_mapping(colors, color_map_one)
+                case 2: sort_key = sort_key_colors_mapping(colors, color_map_two)
+                case 3: sort_key = sort_key_colors_mapping(colors, color_map_three)
+                case 4: sort_key = sort_key_colors_mapping(colors, color_map_four)
+                case 5: sort_key = '31'
+                case 0: sort_key = '32'
+            if 'Basic' in card['type_line']: sort_key = '33'
+            elif 'Land' in card['type_line']: sort_key = '34'
+        except KeyError:
+            sort_key = '35'
+    
+    #Mana produced
+    #FIXME
+    #Land can produce C as a color and can also produce nothing and have None as a type
+    try:
+        '''
+        if 'Evolving Wilds' in card['name']:
+            print()
+        '''
+        produced_mana = card['produced_mana']
+        
+        if 'Land' not in card['type_line']:
+            sort_key += '00'
+        else:
+            match (len(produced_mana)):
+                case 1: sort_key += sort_key_colors_mapping(produced_mana, color_map_one)
+                case 2: sort_key += sort_key_colors_mapping(produced_mana, color_map_two)
+                case 3: sort_key += sort_key_colors_mapping(produced_mana, color_map_three)
+                case 4: sort_key += sort_key_colors_mapping(produced_mana, color_map_four)
+                case 5: sort_key += '31'
+                case 0: sort_key += '32'
+    except KeyError:
+        sort_key += '00'
 
+    #CMC
     try:
         cmc = str(int(card['cmc']))
         sort_key += cmc if len(cmc) > 1 else f'0{cmc}'
     except KeyError: sort_key += '99'
 
+    #Name
     try: sort_key += card['name'].lower().replace(' ', '')
     except KeyError: pass
 
+    #Date
     try: sort_key += card['released_at']
     except: pass
         
@@ -115,6 +164,8 @@ def get_database_table_name() -> str:
     return config.get('BULK', 'data_type').replace(' ', '_').lower()
 
 def get_card_from_db(connection: Connection, card_id: str) -> dict:
+    from ast import literal_eval
+    
     query = f'''
         SELECT * FROM {get_database_table_name()}
         WHERE id = '{card_id}'
@@ -146,6 +197,8 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
     return card_ids
 
 def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
+    from ast import literal_eval
+    
     query = f"SELECT id, prices FROM {get_database_table_name()}"
     
     cursor = connection.cursor()

@@ -26,6 +26,7 @@ collections_connection = create_connection(config.get('FILE', 'collections'))
 if config.get_boolean('FLAG', 'collections_was_created'):
     create_collections_list(collections_connection)
     create_collection(collections_connection, 'Main collection')
+    config.set('COLLECTION', 'current_collection', 'maincollection')
 
 #Manage decks database
 decks_connection = create_connection(config.get('FILE', 'decks'))

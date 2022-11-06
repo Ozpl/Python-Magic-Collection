@@ -156,3 +156,6 @@ def format_collection_name(name: str) -> str:
         if char in whitelist:
             formatted_name += char
     return formatted_name
+
+#FIXME
+#If sort_key changes, nothing happens in collections - collections don't update it from database
