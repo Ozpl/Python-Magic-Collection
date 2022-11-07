@@ -1,13 +1,9 @@
-from json import load
 from sqlite3 import Connection, OperationalError
-from re import compile
 from typing import Any
-from modules.globals import config
-from modules.logging import console_log
-from modules.globals import DATABASE_INSERT_TO_MAIN
-from modules.database.functions import get_database_table_name
+from modules.globals import config, DATABASE_INSERT_TO_MAIN
 
 def assign_data_type(element: Any) -> str:
+    from re import compile
     data_type = ''
 
     if isinstance(element, list): data_type = 'list'
@@ -29,6 +25,8 @@ def assign_data_type(element: Any) -> str:
     return data_type
 
 def get_column_names_and_types() -> dict:
+    from json import load
+    
     with open(f"./{config.get('FOLDER', 'database')}/{config.get('BULK', 'data_type')}.json", 'r', encoding='utf8') as f:
         j = load(f)
         names_and_types = {}
@@ -44,6 +42,9 @@ def get_column_names_and_types() -> dict:
         return names_and_types
 
 def create_database_table(connection: Connection) -> None:
+    from modules.database.functions import get_database_table_name
+    from modules.logging import console_log
+
     console_log('info', f"Creating {get_database_table_name()} in database")
     main_column_names_and_types = get_column_names_and_types()
 

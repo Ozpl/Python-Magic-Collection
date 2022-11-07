@@ -81,9 +81,10 @@ def create_sort_key_string(card: dict) -> str:
             case 0: sort_key = '32'
         if 'Basic' in card['type_line']: sort_key = '33'
         elif 'Land' in card['type_line']: sort_key = '34'
+        elif 'Token' in card['type_line']: sort_key = '35'
         colors_flag = True
     except KeyError:
-        sort_key = '35'
+        sort_key = '36'
         
     #Colors
     if not colors_flag:
@@ -98,8 +99,9 @@ def create_sort_key_string(card: dict) -> str:
                 case 0: sort_key = '32'
             if 'Basic' in card['type_line']: sort_key = '33'
             elif 'Land' in card['type_line']: sort_key = '34'
+            elif 'Token' in card['type_line']: sort_key = '35'
         except KeyError:
-            sort_key = '35'
+            sort_key = '36'
     
     #Mana produced
     #FIXME
@@ -198,8 +200,13 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
 def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
     from ast import literal_eval
+    from forex_python.converter import CurrencyRates, RatesNotAvailableError
     
-    query = f"SELECT id, prices FROM {get_database_table_name()}"
+    cr = CurrencyRates()
+    try: rate = cr.get_rate('USD', config.get('COLLECTION', 'price_type').upper())
+    except RatesNotAvailableError: rate = 1
+    
+    query = f"SELECT id, prices FROM {get_database_table_name()} ORDER BY sort_key"
     
     cursor = connection.cursor()
     cursor.execute(query)
@@ -214,7 +221,10 @@ def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
         if price_type == 'eur':
             cards['prices_regular'].append(prices['eur'])
             cards['prices_foil'].append(prices['eur_foil'])
-        elif price_type == 'usd':
+        elif price_type == 'tix':
+            cards['prices_regular'].append(prices['tix'])
+            cards['prices_foil'].append(None)
+        else:
             if prices['usd_etched']:
                 if prices['usd']:
                     cards['prices_regular'].append(prices['usd'])
@@ -224,9 +234,16 @@ def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
             else:
                 cards['prices_regular'].append(prices['usd'])
                 cards['prices_foil'].append(prices['usd_foil'])
-        elif price_type == 'tix':
-            cards['prices_regular'].append(prices['tix'])
-            cards['prices_foil'].append(None)
+            
+            #FIXME
+            #We convert price from dollars, even though most countries with other currency will be from Europe - what to do?
+            if price_type != 'usd':
+                if cards['prices_regular'][-1] is not None:
+                    cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * rate, 2))
+                    if cards['prices_regular'][-1].index('.') == len(cards['prices_regular'][-1])-2: cards['prices_regular'][-1] = cards['prices_regular'][-1] + '0'
+                if cards['prices_foil'][-1] is not None:
+                    cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * rate, 2))
+                    if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
     
     return cards
 

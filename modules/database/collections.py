@@ -1,6 +1,4 @@
-from string import ascii_letters, digits
-from sqlite3 import OperationalError
-from sqlite3 import Connection
+from sqlite3 import Connection, OperationalError
 from modules.logging import console_log
 from modules.database.functions import format_card_values, query_get_table_columns
 
@@ -150,6 +148,8 @@ def add_card_to_collection(connection: Connection, collection_name: str, id: str
         connection.commit()
         
 def format_collection_name(name: str) -> str:
+    from string import ascii_letters, digits
+    
     whitelist = ascii_letters + digits
     formatted_name = ''
     for char in name.lower():

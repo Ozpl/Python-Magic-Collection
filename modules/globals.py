@@ -10,11 +10,13 @@ UI_PATTERN_LEGEND = """Available symbols:
 Required:
     %n - card's name
     Choose at least one:
-        %e - set (abbreviation, i.e. "DOM")
-        %s - set name (full name, i.e. "Dominaria")
+        %e - set (abbreviation, e.g. "DOM")
+        %s - set name (full name, e.g. "Dominaria")
     %c - collector's number
     %q - quantity
-    %f - is foil?
+    %f - is foil? (e.g. True or False)
+    #TODO
+    #%regular and %foil
     
 Optional:
     %p - price

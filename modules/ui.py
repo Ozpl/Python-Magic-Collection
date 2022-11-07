@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
 from modules.ui_functions import add_card_to_collection_in_add_cards, download_image_if_not_downloaded, process_import_list, refresh_collection_names_in_corner, update_card_count_in_add_cards
 
@@ -51,6 +51,14 @@ widget_hierarchy = [
                 {'name': 'col_lyt_pre_lyt_inf', 'type': 'QLabel'},
                 {'name': 'col_lyt_pre_lyt_des', 'type': 'QPlainTextEdit'},
                 {'name': 'col_lyt_pre_lyt_tag', 'type': 'QLabel'},
+
+{'name': 'pro', 'type': 'QWidget'},
+    {'name': 'pro_lyt', 'type': 'QHBoxLayout'},
+        {'name': 'pro_lyt_scr', 'type': 'QScrollArea'},
+            {'name': 'pro_lyt_scr_grd', 'type': 'QGroupBox'},
+                {'name': 'pro_lyt_scr_grd_lyt', 'type': 'QGridLayout'},
+        {'name': 'pro_lyt_inf', 'type': 'QGroupBox'},
+            {'name': 'pro_lyt_inf_lyt', 'type': 'QVBoxLayout'},
 
 {'name': 'add', 'type': 'QWidget'},
     {'name': 'add_lyt', 'type': 'QHBoxLayout'},
@@ -139,6 +147,14 @@ col_lyt_pre_lyt_inf = QLabel('Regular: X Foil: X   EUR: 1345.99E USD: 1345.99D')
 col_lyt_pre_lyt_des = QPlainTextEdit('This is card description')
 col_lyt_pre_lyt_tag = QLabel('These are card tags')
 
+pro = QWidget()
+pro_lyt = QHBoxLayout()
+pro_lyt_scr = QScrollArea()
+pro_lyt_scr_grd = QGroupBox()
+pro_lyt_scr_grd_lyt = QGridLayout()
+pro_lyt_inf = QGroupBox()
+pro_lyt_inf_lyt = QVBoxLayout()
+
 add = QWidget()
 add_lyt = QHBoxLayout()
 add_lyt_gbx = QGroupBox()
@@ -220,6 +236,7 @@ class UI(QWidget):
 
         create_corner_widget()
         create_collection_tab()
+        create_progression_tab()
         create_decks_tab()
         create_add_cards_tab()
         create_wishlist_tab()
@@ -287,6 +304,8 @@ def create_corner_widget():
     cor_lyt.addWidget(cor_lyt_cmb)
     cor_lyt_cmb.currentIndexChanged.connect(current_collection_index_changed)
     cor_lyt.addWidget(cor_lyt_chk)
+    cor_lyt_chk.setChecked(True) if config.get_boolean('COLLECTION', 'show_database') else cor_lyt_chk.setChecked(False)
+    cor_lyt_chk.clicked.connect(show_database_checked)
 #Corner -> Events
 add_collection_window = AddCollectionWindow()
 def add_collection_button_pressed():
@@ -308,6 +327,12 @@ def current_collection_index_changed():
         last_width = -1
         last_height = -1
         create_collection_tab_grid()
+def show_database_checked():
+    global last_width, last_height
+    config.set('COLLECTION', 'show_database', 'true') if cor_lyt_chk.isChecked() else config.set('COLLECTION', 'show_database', 'false')
+    last_width = -1
+    last_height = -1
+    create_collection_tab_grid()
 
 #Collection
 def create_collection_tab():
@@ -320,6 +345,7 @@ def create_collection_tab():
     [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_clr]
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_and)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_orr)
+    col_lyt_crd_lyt_flt_lyt_orr.setChecked(True)
     [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_cmc]
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_slb)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbx)
@@ -507,26 +533,47 @@ def create_collection_tab_grid():
                 iml.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 iml.setStyleSheet("background-color: gainsboro")
                 col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
-                                                    
+                
+                db_idx = database_cards['id'].index(cards_to_display[i])
+                
+                #TODO
+                #Show only price for foil if you have foils in collection?
+                price_str = ''
+                if database_cards['prices_regular'][db_idx] is not None and database_cards['prices_foil'][db_idx] is not None:
+                    price_str = f"{database_cards['prices_regular'][db_idx]} / {database_cards['prices_foil'][db_idx]}"
+                elif database_cards['prices_regular'][db_idx] is not None:
+                    price_str = f"R:{database_cards['prices_regular'][db_idx]}"
+                elif database_cards['prices_foil'][db_idx] is not None:
+                    price_str = f"F:{database_cards['prices_foil'][db_idx]}"
+                else:
+                    price_str = 'N/A'
+                
+                if price_str:
+                    if config.get('COLLECTION', 'price_type') == 'eur': price_str += '€'
+                    elif config.get('COLLECTION', 'price_type') == 'usd': price_str += '$'
+                    else: price_str += f" {config.get('COLLECTION', 'price_type').upper()}"
+                
                 if cards_to_display[i] in collection_cards['id']:
-                    crd_idx = collection_cards['id'].index(cards_to_display[i])
-                    db_idx = database_cards['id'].index(cards_to_display[i])
-                    
-                    price_str = database_cards['prices_regular'][db_idx] if database_cards['prices_regular'][db_idx] is not None else database_cards['prices_foil'][db_idx]
-                    if price_str:
-                        if config.get('COLLECTION', 'price_type') == 'eur': price_str += '€'
-                        elif config.get('COLLECTION', 'price_type') == 'usd': price_str += '$'
-                        elif config.get('COLLECTION', 'price_type') == 'tix': price_str += 'TIX'
-                    else:
-                        price_str = 'N/A'
                     #TODO
                     #align image
-                    lbl_text = f"{collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]} (R:{collection_cards['regular'][crd_idx]} F:{collection_cards['foil'][crd_idx]}) - {price_str}"
+                    crd_idx = collection_cards['id'].index(cards_to_display[i])
+                    
+                    lbl_text = ''
+                    if collection_cards['regular'][crd_idx] is not None and collection_cards['regular'][crd_idx] > 0 and collection_cards['foil'][crd_idx] is not None and collection_cards['foil'][crd_idx] > 0:
+                        lbl_text += f"{collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]} ({collection_cards['regular'][crd_idx]}/{collection_cards['foil'][crd_idx]})"
+                    elif collection_cards['regular'][crd_idx] is not None and collection_cards['regular'][crd_idx] > 0:
+                        lbl_text += f"{collection_cards['regular'][crd_idx]} (regular)"
+                    elif collection_cards['foil'][crd_idx] is not None and collection_cards['foil'][crd_idx] > 0:
+                        lbl_text += f"{collection_cards['foil'][crd_idx]} (foil)"
+                    if price_str: lbl_text += f" - {price_str}"
+                    
                     lbl = QLabel(lbl_text)
                     lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
                     col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
                 else:
-                    lbl = QLabel(f"Not collected")
+                    lbl_text = f"Not collected"
+                    if price_str: lbl_text += f" - {price_str}"
+                    lbl = QLabel(lbl_text)
                     lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
                     col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
                     
@@ -538,6 +585,26 @@ def create_collection_tab_grid():
 
     last_width = cards_in_row
     last_height = cards_in_col
+
+#Progression
+def create_progression_tab():
+    tab_bar.addTab(pro, config.get('APP', 'progression'))
+    pro.setLayout(pro_lyt)
+    
+    pro_lyt.addWidget(pro_lyt_scr)
+    pro_lyt_scr.setWidget(pro_lyt_scr_grd)
+    pro_lyt_scr_grd.setLayout(pro_lyt_scr_grd_lyt)
+    pro_lyt.addWidget(pro_lyt_inf)
+    pro_lyt_inf.setLayout(pro_lyt_inf_lyt)
+    
+    #DEBUG
+    lbl = QLabel('asd')
+    lbl.setMinimumSize(400,400)
+    pro_lyt_scr.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
+    pro_lyt_scr.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    pro_lyt_scr.setWidgetResizable(True)
+    pro_lyt_scr_grd_lyt.addWidget(lbl, 1, 1)
+    pro_lyt_inf_lyt.addWidget(lbl)
 
 #Decks
 def create_decks_tab():

@@ -25,6 +25,23 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
             r.raw.decode_content = True
             with open(file_name,'wb') as f:
                 copyfileobj(r.raw, f)
+def split_line_to_list(card: str) -> list:
+    last_index = 0
+    opened_quatation = False
+    split_card = []
+    
+    for i, char in enumerate(card):
+        if char == '"':
+            opened_quatation = False if opened_quatation else True
+            
+        if not opened_quatation and char == ',':
+            if card[last_index:i].startswith('"') and card[last_index:i].endswith('"'):
+                split_card.append(card[last_index+1:i-1])
+            else:
+                split_card.append(card[last_index:i])
+            last_index = i + 1
+    split_card.append(card[last_index:])
+    return split_card
 
 #Corner widget
 def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox, current_collection: str) -> None:
@@ -138,23 +155,6 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
     #Refresh collection list in corner
     
     console_log('INFO', f'Transaction completed, created new collection "{collection_name}"')
-def split_line_to_list(card: str) -> list:
-    last_index = 0
-    opened_quatation = False
-    split_card = []
-    
-    for i, char in enumerate(card):
-        if char == '"':
-            opened_quatation = False if opened_quatation else True
-            
-        if not opened_quatation and char == ',':
-            if card[last_index:i].startswith('"') and card[last_index:i].endswith('"'):
-                split_card.append(card[last_index+1:i-1])
-            else:
-                split_card.append(card[last_index:i])
-            last_index = i + 1
-    split_card.append(card[last_index:])
-    return split_card
 def handle_names_and_sets_exceptions(split_card: dict) -> dict:
     import re
     

@@ -1,14 +1,13 @@
-from configparser import ConfigParser
-from datetime import datetime, timedelta
-from os import mkdir, path
-
 class Config:
     '''Class which stores all settable variables as strings in .ini file using ConfigParser library. Use 'set_value' and 'get_x', where x can be 'bool', 'int', 'float' or 'value'.'''
     def __init__(self) -> None:
+        from configparser import ConfigParser
+        
         self.config_parser = ConfigParser()
         self.load()
 
     def create_default_config_file(self) -> None:
+        from datetime import datetime, timedelta
         self.config_parser['DEFAULT'] = {}
         self.config_parser['FLAG'] = {
             'downloaded_from_scryfall': 'false',
@@ -44,6 +43,7 @@ class Config:
             'font': 'MS Shell Dlg 2',
             'font_size': str(13),
             'collection': 'Collection',
+            'progression': 'Progression',
             'decks': 'Decks',
             'add_cards': 'Add cards',
             'wishlist': "Wishlist",
@@ -87,12 +87,16 @@ class Config:
         self.save()
 
     def build_folder_structure(self) -> None:
+        from os import mkdir, path
+        
         for folder in self.config_parser['FOLDER']:
             if not path.exists(f"./{self.config_parser['FOLDER'][folder]}"):
                 mkdir(f"./{self.config_parser['FOLDER'][folder]}")
     
     def build_file_structure(self) -> None:
-         for file in self.config_parser['FILE']:
+        from os import  path
+
+        for file in self.config_parser['FILE']:
             if file != 'config':
                 if not path.exists(self.config_parser['FILE'][file]):
                     with open(self.config_parser['FILE'][file], 'w'): pass

@@ -1,5 +1,3 @@
-from datetime import datetime
-from json import dump
 from requests import get
 from modules.globals import config
 from modules.logging import console_log
@@ -10,6 +8,8 @@ def get_bulk_data_response(url: str) -> list[dict]:
     return response['data']
 
 def download_bulk_json_file(url: str, file_name: str) -> None:
+    from json import dump
+
     console_log('info', 'Downloading new bulk_data')
     response = get(url)
     with open(f"./{config.get('FOLDER', 'database')}/{file_name}.json", 'w', encoding='utf8') as f:
@@ -17,6 +17,8 @@ def download_bulk_json_file(url: str, file_name: str) -> None:
     console_log('info', 'bulk_data was downloaded successfully')
 
 def get_data_from_scryfall() -> None:
+    from datetime import datetime
+    
     bulk_response = get_bulk_data_response(config.get('BULK', 'url'))
     bulk_data_type = config.get('BULK', 'data_type')
     bulk_uri = [element['download_uri'] for element in bulk_response if element['name'] == bulk_data_type][0]
