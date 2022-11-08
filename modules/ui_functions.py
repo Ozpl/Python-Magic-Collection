@@ -1,5 +1,8 @@
 from sqlite3 import Connection
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QLabel, QPlainTextEdit
+from typing import Any
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGroupBox, QLabel, QPlainTextEdit
 from modules.globals import config
 
 #Global functions
@@ -35,7 +38,7 @@ def split_line_to_list(card: str) -> list:
             opened_quatation = False if opened_quatation else True
             
         if not opened_quatation and char == ',':
-            if card[last_index:i].startswith('"') and card[last_index:i].endswith('"'):
+            if card[last_index:i][0] == '"' and card[last_index:i][-1] == '"':
                 split_card.append(card[last_index+1:i-1])
             else:
                 split_card.append(card[last_index:i])
@@ -57,6 +60,140 @@ def refresh_collection_names_in_corner(connection: Connection, combo_box: QCombo
             combo_box.setCurrentIndex(1)
         combo_box.setCurrentIndex(items_formatted.index(current_collection))
     config.set('FLAG', 'corner_refreshing', 'false')
+
+#Collection
+def calculate_grid_sizes(grid_widget: QGroupBox) -> dict:
+    from math import floor
+    
+    current_grid_size = grid_widget.geometry().size()
+
+    card_width = 215
+    card_height = int(card_width * 1.39)
+
+    cards_in_row = floor(current_grid_size.width() / card_width)
+    cards_in_row = 8 if cards_in_row > 8 else cards_in_row
+    cards_in_row = 3 if cards_in_row < 3 else cards_in_row
+
+    cards_in_col = floor(current_grid_size.height() / card_height)
+    cards_in_col = 4 if cards_in_col > 4 else cards_in_col
+    cards_in_col = 2 if cards_in_col < 2 else cards_in_col
+    
+    cards_on_grid = cards_in_row * cards_in_col
+
+    grid_width = current_grid_size.width()
+    margin_horizontal = 20 * 2
+    total_cards_width = cards_in_row * card_width
+    horizontal_space_left = grid_width - total_cards_width - margin_horizontal
+    number_of_horizontal_spacings = (cards_in_row - 1)
+    spacing_horizontal = horizontal_space_left / number_of_horizontal_spacings
+
+    #info labels are 15px high
+    grid_height = current_grid_size.height()
+    margin_vertical = 15 * 2 + 20
+    total_cards_height = cards_in_col * card_height
+    vertical_space_left = grid_height - total_cards_height - margin_vertical
+    number_of_vertical_spacings = (cards_in_col - 1)
+    spacing_vertical = vertical_space_left / number_of_vertical_spacings
+    
+    result = {
+        'cards_on_grid': cards_on_grid,
+        'card_width': card_width,
+        'card_height': card_height,
+        'cards_in_row': cards_in_row,
+        'cards_in_col': cards_in_col,
+        'spacing_horizontal': spacing_horizontal,
+        'spacing_vertical': spacing_vertical
+    }
+    
+    return result
+def delete_widgets_from_layout(layout: Any) -> None:
+    for i in reversed(range(layout.count())): 
+            layout.itemAt(i).widget().setParent(None)
+def prepare_list_of_cards_to_show(filtered_cards: list, database_cards: dict, collection_cards: dict) -> list:
+    cards_to_display = []
+    
+    if filtered_cards:
+        if config.get_boolean('COLLECTION', 'show_database'):
+            cards_to_display = filtered_cards
+        else:
+            for element in filtered_cards:
+                if element in collection_cards['id']:
+                    cards_to_display.append(element)
+    elif config.get_boolean('COLLECTION', 'show_database'):
+        cards_to_display = database_cards['id']
+    else:
+        cards_to_display = collection_cards['id']
+        
+    return cards_to_display
+def set_maximum_number_of_pages_and_update_info(cards_to_display: list, cards_on_grid: int, page_control_widget: QDoubleSpinBox, info_widget: QLabel) -> None:
+    if len(cards_to_display) == 0: page_control_widget.setMaximum(1)
+    elif len(cards_to_display) % cards_on_grid == 0: page_control_widget.setMaximum(len(cards_to_display) / cards_on_grid)
+    else: page_control_widget.setMaximum(len(cards_to_display) / cards_on_grid + 1)
+    
+    info_widget.setText(f'Found {len(cards_to_display)} cards and there are {int(page_control_widget.maximum())} pages.')
+def download_card_images_for_current_page(connection: Connection, cards_to_display: list, start: int, end: int, image_extension: str) -> None:
+    from ast import literal_eval
+    from modules.database.functions import get_card_from_db
+    
+    for card in cards_to_display[start:end]:
+        card_db = get_card_from_db(connection, card)
+        if card_db['image_uris']:
+            [download_image_if_not_downloaded(connection, card_db['id'], image_extension) for element in card_db['image_uris'] if element == config.get('COLLECTION', 'image_type')]
+        elif card_db['card_faces']:
+            card_faces = literal_eval(card_db['card_faces'])
+            [download_image_if_not_downloaded(connection, card_db['id'], image_extension) for element in card_faces[0]['image_uris'] if element == config.get('COLLECTION', 'image_type')]
+def create_price_string(card: str, database_cards: dict) -> str:
+    price_string = ''
+    
+    db_index = database_cards['id'].index(card)
+    
+    if database_cards['prices_regular'][db_index] is not None: price_string += f"{database_cards['prices_regular'][db_index]}"
+    else: price_string += 'N/A'
+    
+    price_string += ' / '
+    
+    if database_cards['prices_foil'][db_index] is not None: price_string += f"{database_cards['prices_foil'][db_index]}"
+    else: price_string += 'N/A'
+    
+    return price_string
+def create_currency_string(price_str: str) -> str:
+    currency_symbol = ''
+    if price_str:
+        if config.get('COLLECTION', 'price_currency') == 'eur': currency_symbol = '€'
+        elif config.get('COLLECTION', 'price_currency') == 'usd': currency_symbol = '$'
+        else: currency_symbol += f" {config.get('COLLECTION', 'price_currency').upper()}"
+    return currency_symbol
+def create_card_image(card_image: QLabel, card: str, image_extension: str, card_width: int, card_height: int) -> None:
+    card_image.setObjectName('image')
+    card_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    card_image.setStyleSheet("background-color: gainsboro; margin:5px")
+    
+    pixmap = QPixmap(f"{config.get('FOLDER', 'cards')}/{card}.{image_extension}")
+    pixmap_scaled = pixmap.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+    card_image.setPixmap(pixmap_scaled)
+def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: dict, card: str, price_string: str, currency_symbol: str) -> None:
+    card_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+    
+    crd_idx = collection_cards['id'].index(card)
+    card_info_text = ''
+    price_slash = price_string.index(' / ')
+    regular = collection_cards['regular'][crd_idx]
+    foil = collection_cards['foil'][crd_idx]
+    
+    if in_collection:
+        if regular is not None and regular > 0 and foil is not None and foil > 0:
+            card_info_text += f"{regular + foil} ({regular}/{foil}) - {price_string}{currency_symbol}"
+        elif regular is not None and regular > 0:
+            card_info_text += f"{regular} (regular) - {price_string[0:price_slash]}{currency_symbol}"
+        elif foil is not None and foil > 0:
+            card_info_text += f"{foil} (foil) - {price_string[price_slash+2:]}{currency_symbol}"
+    else:
+        card_info_text = f"Not collected - {price_string}{currency_symbol}"
+    
+    card_info.setText(card_info_text)
+def create_card_extra_info(card_extra_info: QLabel) -> None:
+    card_extra_info.setText('Extra info')
+    card_extra_info.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
 
 #Add cards tab
 def update_card_count_in_add_cards(connection: Connection, found_cards: list, current_row: int, label: QLabel) -> None:

@@ -2,7 +2,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
-from modules.ui_functions import add_card_to_collection_in_add_cards, download_image_if_not_downloaded, process_import_list, refresh_collection_names_in_corner, update_card_count_in_add_cards
 
 app = QApplication([])
 app_lyt = QVBoxLayout()
@@ -212,7 +211,7 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
     collections_connection = cl_connection
     cards_connection = cd_connection
 
-    database_cards = get_cards_ids_prices_list(database_connection, config.get('COLLECTION', 'price_type'))
+    database_cards = get_cards_ids_prices_list(database_connection, config.get('COLLECTION', 'price_source'))
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     filtered_cards = []
 
@@ -224,15 +223,9 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
 #UI Class and its Events
 class UI(QWidget):
     def __init__(self, parent=None) -> None:
-        from os import path
-        super(UI, self).__init__(parent)
-
-        #globals from config.ini
-        global image_extension
+        from modules.ui_functions import refresh_collection_names_in_corner
         
-        if path.exists('config.ini'):
-            if config.get('COLLECTION', 'image_type') == 'png': image_extension = 'png'
-            else: image_extension = 'jpg'
+        super(UI, self).__init__(parent)
 
         create_corner_widget()
         create_collection_tab()
@@ -288,6 +281,8 @@ class AddCollectionWindow(QWidget):
 
     def confirm_button_pressed(self):
         from modules.database.collections import create_collection
+        from modules.ui_functions import refresh_collection_names_in_corner
+        
         create_collection(collections_connection, self.line_edit.text())
         refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb)
         #Add window prompt - succesful or not
@@ -313,6 +308,8 @@ def add_collection_button_pressed():
     add_collection_window.line_edit.setText('')
 def current_collection_index_changed():
     from modules.database.collections import format_collection_name, get_cards_from_collection
+    from modules.database.functions import refresh_collection_names_in_corner
+    
     if not config.get_boolean('FLAG', 'corner_refreshing'):
         global last_width, last_height, collection_cards, filtered_cards
         
@@ -433,158 +430,67 @@ def page_control_value_changed():
     create_collection_tab_grid()
 #Collection -> Grid
 def create_collection_tab_grid():
-    from ast import literal_eval
-    from math import floor
-    from modules.database.functions import get_card_from_db
-    #Another approach? Get summed cards width in one row, subtract it from whole grid width and get spacing. If spacing is less than some value, then delete one card from row
+    from modules.ui_functions import calculate_grid_sizes, create_card_image, create_card_extra_info, create_card_info, create_currency_string, create_price_string, delete_widgets_from_layout, download_card_images_for_current_page, prepare_list_of_cards_to_show, set_maximum_number_of_pages_and_update_info
     global filtered_cards, last_width, last_height
 
-    current_grid_size = col_lyt_crd_lyt_grd.geometry().size()
+    grid_sizes = calculate_grid_sizes(col_lyt_crd_lyt_grd)
 
-    card_width = 215
-    card_height = int(card_width * 1.39)
-
-    cards_in_row = floor(current_grid_size.width() / card_width)
-    cards_in_row = 8 if cards_in_row > 8 else cards_in_row
-    cards_in_row = 3 if cards_in_row < 3 else cards_in_row
-
-    cards_in_col = floor(current_grid_size.height() / card_height)
-    cards_in_col = 4 if cards_in_col > 4 else cards_in_col
-    cards_in_col = 2 if cards_in_col < 2 else cards_in_col
+    if grid_sizes['spacing_horizontal'] < 15: grid_sizes['cards_in_row'] = grid_sizes['cards_in_row'] - 1
+    if grid_sizes['spacing_vertical'] < 23: grid_sizes['cards_in_col'] = grid_sizes['cards_in_col'] - 1
     
-    cards_on_grid = cards_in_row * cards_in_col
-
-    grid_width = current_grid_size.width()
-    margin_horizontal = 20 * 2
-    total_cards_width = cards_in_row * card_width
-    horizontal_space_left = grid_width - total_cards_width - margin_horizontal
-    number_of_horizontal_spacings = (cards_in_row - 1)
-    spacing_horizontal = horizontal_space_left / number_of_horizontal_spacings
-
-    grid_height = current_grid_size.height()
-    margin_vertical = 20 * 2
-    total_cards_height = cards_in_col * card_height
-    vertical_space_left = grid_height - total_cards_height - margin_vertical
-    number_of_vertical_spacings = (cards_in_col - 1)
-    spacing_vertical = vertical_space_left / number_of_vertical_spacings
-
-    if spacing_horizontal < 15: cards_in_row = cards_in_row - 1
-    if spacing_vertical < 23: cards_in_col = cards_in_col - 1
-    
-    if last_width != cards_in_row or last_height != cards_in_col:
-        for i in reversed(range(col_lyt_crd_lyt_grd_lyt.count())): 
-            col_lyt_crd_lyt_grd_lyt.itemAt(i).widget().setParent(None)
-
-    
+    if last_width != grid_sizes['cards_in_row'] or last_height != grid_sizes['cards_in_col']:
+        delete_widgets_from_layout(col_lyt_crd_lyt_grd_lyt)
+        
+        cards_to_display = prepare_list_of_cards_to_show(filtered_cards, database_cards, collection_cards)
         #TODO
         #Set pagination here for filtered cards, when filter is on: set page to one and when the filter is off: return to previously viewed page
-        #FIXME
-        cards_to_display = []
-        
-        if filtered_cards:
-            if config.get_boolean('COLLECTION', 'show_database'):
-                cards_to_display = filtered_cards
-            else:
-                for element in filtered_cards:
-                    if element in collection_cards['id']:
-                        cards_to_display.append(element)
-        elif config.get_boolean('COLLECTION', 'show_database'):
-            cards_to_display = database_cards['id']
-        else:
-            cards_to_display = collection_cards['id']
-
         current_page = config.get_int('COLLECTION', 'current_page')
-        starting_index = (current_page - 1) * cards_on_grid
+
+        starting_index = (current_page - 1) * grid_sizes['cards_on_grid']
+        ending_index = (current_page - 1) * grid_sizes['cards_on_grid'] + grid_sizes['cards_on_grid']
         if starting_index < 0: starting_index = 0
-        ending_index = (current_page - 1) * cards_on_grid + cards_on_grid
         if ending_index < 0: ending_index = 0
 
-        if len(cards_to_display) == 0:
-            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(1)
-        elif len(cards_to_display) % cards_on_grid == 0:
-            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid)
-        else:
-            col_lyt_crd_lyt_tag_lyt_pag.setMaximum(len(cards_to_display) / cards_on_grid + 1)
-        col_lyt_crd_lyt_tag_lyt_inf.setText(f'Found {len(cards_to_display)} cards and there are {int(col_lyt_crd_lyt_tag_lyt_pag.maximum())} pages.')
+        set_maximum_number_of_pages_and_update_info(cards_to_display, grid_sizes['cards_on_grid'], col_lyt_crd_lyt_tag_lyt_pag, col_lyt_crd_lyt_tag_lyt_inf)
+        download_card_images_for_current_page(database_connection, cards_to_display, starting_index, ending_index, config.get('COLLECTION', 'image_type'))
         
-        for card in cards_to_display[starting_index:ending_index]:
-            card_db = get_card_from_db(database_connection, card)
-            if card_db['image_uris']:
-                [download_image_if_not_downloaded(database_connection, card_db['id'], image_extension) for element in card_db['image_uris'] if element == config.get('COLLECTION', 'image_type')]
-            elif card_db['card_faces']:
-                card_faces = literal_eval(card_db['card_faces'])
-                [download_image_if_not_downloaded(database_connection, card_db['id'], image_extension) for element in card_faces[0]['image_uris'] if element == config.get('COLLECTION', 'image_type')]
         x = 1
         y = 1
         for i in range(starting_index, ending_index):
             if i > len(cards_to_display) - 1:
-                pass
+                #TODO
+                #Keep grid layout even when there's less element than intended for full page of cards
+                break
             else:
                 #TODO
                 #Flip a card indicator when it has faces
-                iml = QLabel()
-                iml.setObjectName('image')
-                iml.setStyleSheet("margin:5px")
-                temp = QPixmap(f"{config.get('FOLDER', 'cards')}/{cards_to_display[i]}.{image_extension}")
-                imp = temp.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                iml.setPixmap(imp)
-                #TODO
-                #align bottom center?
-                iml.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                iml.setStyleSheet("background-color: gainsboro")
-                col_lyt_crd_lyt_grd_lyt.addWidget(iml, (y-1), (x-1))
                 
-                db_idx = database_cards['id'].index(cards_to_display[i])
+                #Card image
+                card_image = QLabel()
+                create_card_image(card_image, cards_to_display[i], config.get('COLLECTION', 'image_type'), grid_sizes['card_width'], grid_sizes['card_height'])
+                col_lyt_crd_lyt_grd_lyt.addWidget(card_image, (y-1), (x-1))
                 
-                #TODO
-                #Show only price for foil if you have foils in collection?
-                price_str = ''
-                if database_cards['prices_regular'][db_idx] is not None and database_cards['prices_foil'][db_idx] is not None:
-                    price_str = f"{database_cards['prices_regular'][db_idx]} / {database_cards['prices_foil'][db_idx]}"
-                elif database_cards['prices_regular'][db_idx] is not None:
-                    price_str = f"R:{database_cards['prices_regular'][db_idx]}"
-                elif database_cards['prices_foil'][db_idx] is not None:
-                    price_str = f"F:{database_cards['prices_foil'][db_idx]}"
-                else:
-                    price_str = 'N/A'
+                #Card info label
+                price_string = create_price_string(cards_to_display[i], database_cards)
+                currency_symbol = create_currency_string(price_string)
                 
-                if price_str:
-                    if config.get('COLLECTION', 'price_type') == 'eur': price_str += '€'
-                    elif config.get('COLLECTION', 'price_type') == 'usd': price_str += '$'
-                    else: price_str += f" {config.get('COLLECTION', 'price_type').upper()}"
+                card_info = QLabel()
+                if cards_to_display[i] in collection_cards['id']: create_card_info(card_info, True, collection_cards, cards_to_display[i], price_string, currency_symbol)
+                else: create_card_info(card_info, False, collection_cards, cards_to_display[i], price_string, currency_symbol)
+                col_lyt_crd_lyt_grd_lyt.addWidget(card_info, (y-1), (x-1))
                 
-                if cards_to_display[i] in collection_cards['id']:
-                    #TODO
-                    #align image
-                    crd_idx = collection_cards['id'].index(cards_to_display[i])
-                    
-                    lbl_text = ''
-                    if collection_cards['regular'][crd_idx] is not None and collection_cards['regular'][crd_idx] > 0 and collection_cards['foil'][crd_idx] is not None and collection_cards['foil'][crd_idx] > 0:
-                        lbl_text += f"{collection_cards['regular'][crd_idx] + collection_cards['foil'][crd_idx]} ({collection_cards['regular'][crd_idx]}/{collection_cards['foil'][crd_idx]})"
-                    elif collection_cards['regular'][crd_idx] is not None and collection_cards['regular'][crd_idx] > 0:
-                        lbl_text += f"{collection_cards['regular'][crd_idx]} (regular)"
-                    elif collection_cards['foil'][crd_idx] is not None and collection_cards['foil'][crd_idx] > 0:
-                        lbl_text += f"{collection_cards['foil'][crd_idx]} (foil)"
-                    if price_str: lbl_text += f" - {price_str}"
-                    
-                    lbl = QLabel(lbl_text)
-                    lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-                    col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
-                else:
-                    lbl_text = f"Not collected"
-                    if price_str: lbl_text += f" - {price_str}"
-                    lbl = QLabel(lbl_text)
-                    lbl.setAlignment(Qt.AlignmentFlag.AlignHCenter)
-                    col_lyt_crd_lyt_grd_lyt.addWidget(lbl, (y-1), (x-1))
-                    
-                if x % cards_in_row != 0:
-                    x = x + 1
+                #Card extra info
+                card_extra_info = QLabel()
+                create_card_extra_info(card_extra_info)
+                col_lyt_crd_lyt_grd_lyt.addWidget(card_extra_info, (y-1), (x-1))
+                
+                if x % grid_sizes['cards_in_row'] != 0: x = x + 1
                 else:
                     x = 1
                     y = y + 1
-
-    last_width = cards_in_row
-    last_height = cards_in_col
+    
+    last_width = grid_sizes['cards_in_row']
+    last_height = grid_sizes['cards_in_col']
 
 #Progression
 def create_progression_tab():
@@ -668,9 +574,11 @@ def add_cards_search_button_pressed():
     add_lyt_gbx_lyt_lst.setCurrentRow(add_lyt_gbx_lyt_lst.count()-1)
 #Add cards -> List -> Events
 def add_cards_list_selection_changed():
+    from modules.database.functions import download_image_if_not_downloaded, update_card_count_in_add_cards
+    
     current_index = add_lyt_gbx_lyt_lst.currentRow() if add_lyt_gbx_lyt_lst.currentRow() <= len(add_cards_found_cards)-1 else len(add_cards_found_cards)-1
-    download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], image_extension)
-    file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{image_extension}"
+    download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], config.get('COLLECTION', 'image_type'))
+    file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{config.get('COLLECTION', 'image_type')}"
     pix = QPixmap(file_name)
     pix_scaled = pix.scaled(int(680 * 0.72), 680, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     add_lyt_gbx_lyt_res_lyt_iml.setPixmap(pix_scaled)
@@ -678,7 +586,9 @@ def add_cards_list_selection_changed():
 #Add cards -> Regular -> Events
 def add_regular_button_pressed():
     from modules.database.collections import get_card_ids_from_collection
+    from modules.ui_functions import add_card_to_collection_in_add_cards, update_card_count_in_add_cards
     global cards_in_collection
+    
     current_index = add_lyt_gbx_lyt_lst.currentRow()
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 1, 0, 'add')
     update_card_count_in_add_cards(collections_connection, add_cards_found_cards, current_index, add_lyt_gbx_lyt_res_lyt_lbl)
@@ -687,7 +597,9 @@ def add_regular_button_pressed():
 #Add cards -> Foil -> Events
 def add_foil_button_pressed():
     from modules.database.collections import get_card_ids_from_collection
+    from modules.ui_functions import add_card_to_collection_in_add_cards, update_card_count_in_add_cards
     global cards_in_collection
+    
     current_index = add_lyt_gbx_lyt_lst.currentRow()
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 0, 1, 'add')
     update_card_count_in_add_cards(collections_connection, add_cards_found_cards, current_index, add_lyt_gbx_lyt_res_lyt_lbl)
@@ -731,6 +643,8 @@ def create_import_export_tab():
     imp_lyt_gbx_lyt_res_lyt_scr.setReadOnly(True)
 #Import/export -> Events
 def import_button_pressed():
+    from modules.ui_functions import process_import_list, refresh_collection_names_in_corner
+    
     import_list = imp_lyt_gbx_lyt_inp_lyt_lin.toPlainText().splitlines()
     process_import_list(database_connection, collections_connection, import_list, imp_lyt_gbx_lyt_par_lyt_lin.text(), imp_lyt_gbx_lyt_res_lyt_scr, imp_lyt_gbx_lyt_par_lyt_inp, imp_lyt_gbx_lyt_par_lyt_chk)
     refresh_collection_names_in_corner(collections_connection, cor_lyt_cmb, config.get('COLLECTION', 'current_collection'))

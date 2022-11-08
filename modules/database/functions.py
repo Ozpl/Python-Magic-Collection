@@ -198,12 +198,13 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
+def get_cards_ids_prices_list(connection: Connection, price_source: str) -> list:
     from ast import literal_eval
     from forex_python.converter import CurrencyRates, RatesNotAvailableError
     
     cr = CurrencyRates()
-    try: rate = cr.get_rate('USD', config.get('COLLECTION', 'price_type').upper())
+    currency = config.get('COLLECTION', 'price_currency')
+    try: rate = cr.get_rate('USD', currency.upper())
     except RatesNotAvailableError: rate = 1
     
     query = f"SELECT id, prices FROM {get_database_table_name()} ORDER BY sort_key"
@@ -218,10 +219,10 @@ def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
     
     for element in record:
         prices = literal_eval(element[1])
-        if price_type == 'eur':
+        if price_source == 'eur':
             cards['prices_regular'].append(prices['eur'])
             cards['prices_foil'].append(prices['eur_foil'])
-        elif price_type == 'tix':
+        elif price_source == 'tix':
             cards['prices_regular'].append(prices['tix'])
             cards['prices_foil'].append(None)
         else:
@@ -235,15 +236,13 @@ def get_cards_ids_prices_list(connection: Connection, price_type: str) -> list:
                 cards['prices_regular'].append(prices['usd'])
                 cards['prices_foil'].append(prices['usd_foil'])
             
-            #FIXME
-            #We convert price from dollars, even though most countries with other currency will be from Europe - what to do?
-            if price_type != 'usd':
-                if cards['prices_regular'][-1] is not None:
-                    cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * rate, 2))
-                    if cards['prices_regular'][-1].index('.') == len(cards['prices_regular'][-1])-2: cards['prices_regular'][-1] = cards['prices_regular'][-1] + '0'
-                if cards['prices_foil'][-1] is not None:
-                    cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * rate, 2))
-                    if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
+        if currency not in ['usd', 'eur', 'tix']:
+            if cards['prices_regular'][-1] is not None:
+                cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * rate, 2))
+                if cards['prices_regular'][-1].index('.') == len(cards['prices_regular'][-1])-2: cards['prices_regular'][-1] = cards['prices_regular'][-1] + '0'
+            if cards['prices_foil'][-1] is not None:
+                cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * rate, 2))
+                if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
     
     return cards
 

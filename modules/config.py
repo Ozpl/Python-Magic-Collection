@@ -53,9 +53,12 @@ class Config:
         self.config_parser['COLLECTION'] = {
             'show_database': 'false',
             'image_type': 'normal',
-            'price_type': 'eur',
+            'price_source': 'eur',
+            'price_currency': 'eur',
             'current_collection': 'maincollection',
-            'current_page': '1'
+            'current_page': '1',
+            'current_filter': '',
+            'current_filtered_page': '1'
         }
         self.save()
         self.load()
