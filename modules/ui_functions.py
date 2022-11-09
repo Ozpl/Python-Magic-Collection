@@ -67,40 +67,39 @@ def calculate_grid_sizes(grid_widget: QGroupBox) -> dict:
     
     current_grid_size = grid_widget.geometry().size()
 
-    card_width = 215
+    #card_width = 215
+    card_width = 205
     card_height = int(card_width * 1.39)
+    labels_height = 30
 
-    cards_in_row = floor(current_grid_size.width() / card_width)
+    cards_in_row = floor(current_grid_size.width() / (card_width + 50))
     cards_in_row = 8 if cards_in_row > 8 else cards_in_row
-    cards_in_row = 3 if cards_in_row < 3 else cards_in_row
+    cards_in_row = 2 if cards_in_row < 2 else cards_in_row
 
-    cards_in_col = floor(current_grid_size.height() / card_height)
+    cards_in_col = floor(current_grid_size.height() / (card_height + 50))
     cards_in_col = 4 if cards_in_col > 4 else cards_in_col
-    cards_in_col = 2 if cards_in_col < 2 else cards_in_col
+    cards_in_col = 1 if cards_in_col < 1 else cards_in_col
     
     cards_on_grid = cards_in_row * cards_in_col
 
     grid_width = current_grid_size.width()
-    margin_horizontal = 20 * 2
     total_cards_width = cards_in_row * card_width
-    horizontal_space_left = grid_width - total_cards_width - margin_horizontal
-    number_of_horizontal_spacings = (cards_in_row - 1)
+    horizontal_space_left = grid_width - total_cards_width
+    number_of_horizontal_spacings = (cards_in_row - 1) if cards_in_row > 1 else 1
     spacing_horizontal = horizontal_space_left / number_of_horizontal_spacings
 
-    #info labels are 15px high
     grid_height = current_grid_size.height()
-    margin_vertical = 15 * 2 + 20
-    total_cards_height = cards_in_col * card_height
-    vertical_space_left = grid_height - total_cards_height - margin_vertical
-    number_of_vertical_spacings = (cards_in_col - 1)
+    total_cards_height = cards_in_col * card_height + cards_in_col * labels_height
+    vertical_space_left = grid_height - total_cards_height
+    number_of_vertical_spacings = (cards_in_col - 1) if cards_in_col > 1 else 1
     spacing_vertical = vertical_space_left / number_of_vertical_spacings
     
     result = {
         'cards_on_grid': cards_on_grid,
-        'card_width': card_width,
-        'card_height': card_height,
         'cards_in_row': cards_in_row,
         'cards_in_col': cards_in_col,
+        'card_width': card_width,
+        'card_height': card_height,
         'spacing_horizontal': spacing_horizontal,
         'spacing_vertical': spacing_vertical
     }
@@ -165,22 +164,26 @@ def create_currency_string(price_str: str) -> str:
     return currency_symbol
 def create_card_image(card_image: QLabel, card: str, image_extension: str, card_width: int, card_height: int) -> None:
     card_image.setObjectName('image')
-    card_image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    card_image.setStyleSheet("background-color: gainsboro; margin:5px")
+    card_image.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+    card_image.setMaximumHeight(int(205*1.39))
+    #card_image.setStyleSheet("background-color: gainsboro")
     
     pixmap = QPixmap(f"{config.get('FOLDER', 'cards')}/{card}.{image_extension}")
     pixmap_scaled = pixmap.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     card_image.setPixmap(pixmap_scaled)
 def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: dict, card: str, price_string: str, currency_symbol: str) -> None:
     card_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+    card_info.setMaximumHeight(20)
+    #card_info.setStyleSheet("background-color: gainsboro")
     
-    crd_idx = collection_cards['id'].index(card)
     card_info_text = ''
     price_slash = price_string.index(' / ')
-    regular = collection_cards['regular'][crd_idx]
-    foil = collection_cards['foil'][crd_idx]
     
     if in_collection:
+        crd_idx = collection_cards['id'].index(card)
+        regular = collection_cards['regular'][crd_idx]
+        foil = collection_cards['foil'][crd_idx]
+        
         if regular is not None and regular > 0 and foil is not None and foil > 0:
             card_info_text += f"{regular + foil} ({regular}/{foil}) - {price_string}{currency_symbol}"
         elif regular is not None and regular > 0:
@@ -192,8 +195,45 @@ def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: d
     
     card_info.setText(card_info_text)
 def create_card_extra_info(card_extra_info: QLabel) -> None:
-    card_extra_info.setText('Extra info')
-    card_extra_info.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
+    card_extra_info.setText('Right click to flip card')
+    card_extra_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
+    #card_extra_info.setStyleSheet("background-color: gainsboro")
+    card_extra_info.setMaximumHeight(20)
+
+#Progression
+def find_all_sets_in_db(connection: Connection) -> dict:
+    from modules.database.functions import get_database_table_name
+    
+    sets = {}
+    
+    query = f'''
+        SELECT DISTINCT "set", set_name, set_type, released_at
+        FROM {get_database_table_name()}
+        ORDER BY released_at DESC
+        '''
+
+    cursor = connection.cursor()
+    cursor.execute(query)
+    records = cursor.fetchall()
+
+    for record in records:
+        if record[0] not in sets:
+            sets[record[0]] = [record[1], record[2], record[3]]
+
+    query = f'''
+        SELECT "set", count("set")
+        FROM {get_database_table_name()}
+        GROUP by "set"
+    '''
+    
+    cursor = connection.cursor()
+    cursor.execute(query)
+    records = cursor.fetchall()
+
+    for record in records:
+        sets[record[0]].append(record[1])
+
+    return sets
 
 #Add cards tab
 def update_card_count_in_add_cards(connection: Connection, found_cards: list, current_row: int, label: QLabel) -> None:

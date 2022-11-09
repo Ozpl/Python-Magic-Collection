@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
 
 app = QApplication([])
@@ -26,7 +26,6 @@ widget_hierarchy = [
                         {'name': 'col_lyt_crd_lyt_flt_lyt_clr', 'type': '[QLabel]'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_and', 'type': 'QRadioButton'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_orr', 'type': 'QRadioButton'},
-                        {'name': 'col_lyt_crd_lyt_flt_lyt_cmc', 'type': '[QLabel]'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_slb', 'type': 'QLabel'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_sbx', 'type': 'QLineEdit'},
                         {'name': 'col_lyt_crd_lyt_flt_lyt_sbu', 'type': 'QPushButton'},
@@ -54,8 +53,8 @@ widget_hierarchy = [
 {'name': 'pro', 'type': 'QWidget'},
     {'name': 'pro_lyt', 'type': 'QHBoxLayout'},
         {'name': 'pro_lyt_scr', 'type': 'QScrollArea'},
-            {'name': 'pro_lyt_scr_grd', 'type': 'QGroupBox'},
-                {'name': 'pro_lyt_scr_grd_lyt', 'type': 'QGridLayout'},
+            {'name': 'pro_lyt_scr_grd', 'type': 'QWidget'},
+                {'name': 'pro_lyt_scr_grd_lyt', 'type': 'QGridLayout(pro_lyt_scr_grd)'},
         {'name': 'pro_lyt_inf', 'type': 'QGroupBox'},
             {'name': 'pro_lyt_inf_lyt', 'type': 'QVBoxLayout'},
 
@@ -122,7 +121,6 @@ col_lyt_crd_lyt_flt_lyt = QHBoxLayout()
 col_lyt_crd_lyt_flt_lyt_clr = [QLabel('W'), QLabel('U'), QLabel('B'), QLabel('R'), QLabel('G')]
 col_lyt_crd_lyt_flt_lyt_and = QRadioButton('And')
 col_lyt_crd_lyt_flt_lyt_orr = QRadioButton('Or')
-col_lyt_crd_lyt_flt_lyt_cmc = [QLabel('0'), QLabel('1'), QLabel('2'), QLabel('3'), QLabel('4'), QLabel('5'), QLabel('6'), QLabel('7'), QLabel('8'), QLabel('9')]
 col_lyt_crd_lyt_flt_lyt_slb = QLabel('Search cards:')
 col_lyt_crd_lyt_flt_lyt_sbx = QLineEdit('')
 col_lyt_crd_lyt_flt_lyt_sbu = QPushButton('Search')
@@ -149,8 +147,8 @@ col_lyt_pre_lyt_tag = QLabel('These are card tags')
 pro = QWidget()
 pro_lyt = QHBoxLayout()
 pro_lyt_scr = QScrollArea()
-pro_lyt_scr_grd = QGroupBox()
-pro_lyt_scr_grd_lyt = QGridLayout()
+pro_lyt_scr_grd = QWidget()
+pro_lyt_scr_grd_lyt = QGridLayout(pro_lyt_scr_grd)
 pro_lyt_inf = QGroupBox()
 pro_lyt_inf_lyt = QVBoxLayout()
 
@@ -202,7 +200,7 @@ stt_lyt = QVBoxLayout()
 #Main
 def create_user_interface(db_connection, cl_connection, cd_connection):
     from modules.database.collections import get_cards_from_collection
-    from modules.database.functions import get_cards_ids_prices_list
+    from modules.database.functions import get_cards_ids_prices_sets_list
     from modules.logging import console_log
     global database_connection, collections_connection, cards_connection, database_cards, collection_cards, filtered_cards, add_cards_found_cards
     console_log('info', 'Creating UI')
@@ -211,7 +209,7 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
     collections_connection = cl_connection
     cards_connection = cd_connection
 
-    database_cards = get_cards_ids_prices_list(database_connection, config.get('COLLECTION', 'price_source'))
+    database_cards = get_cards_ids_prices_sets_list(database_connection, config.get('COLLECTION', 'price_source'))
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     filtered_cards = []
 
@@ -308,7 +306,7 @@ def add_collection_button_pressed():
     add_collection_window.line_edit.setText('')
 def current_collection_index_changed():
     from modules.database.collections import format_collection_name, get_cards_from_collection
-    from modules.database.functions import refresh_collection_names_in_corner
+    from modules.ui_functions import refresh_collection_names_in_corner
     
     if not config.get_boolean('FLAG', 'corner_refreshing'):
         global last_width, last_height, collection_cards, filtered_cards
@@ -343,7 +341,6 @@ def create_collection_tab():
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_and)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_orr)
     col_lyt_crd_lyt_flt_lyt_orr.setChecked(True)
-    [col_lyt_crd_lyt_flt_lyt.addWidget(element) for element in col_lyt_crd_lyt_flt_lyt_cmc]
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_slb)
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbx)
     col_lyt_crd_lyt_flt_lyt_sbx.editingFinished.connect(searchbox_editing_finished)
@@ -352,9 +349,6 @@ def create_collection_tab():
     col_lyt_crd_lyt_flt_lyt.addWidget(col_lyt_crd_lyt_flt_lyt_sbc)
     col_lyt_crd_lyt_flt_lyt_sbc.clicked.connect(searchbox_clear_button_pressed)
     for element in col_lyt_crd_lyt_flt_lyt_clr:
-        element.setScaledContents(True)
-        element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
-    for element in col_lyt_crd_lyt_flt_lyt_cmc:
         element.setScaledContents(True)
         element.setPixmap(QPixmap(f"{config.get('FOLDER', 'symbols')}/{element.text()}"))
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_tag)
@@ -392,7 +386,6 @@ def create_collection_tab():
     col_lyt_crd_lyt_tag.setMaximumHeight(50)
     icon_size = col_lyt_crd_lyt_flt.height()-27 
     [element.setMaximumSize(icon_size, icon_size) for element in col_lyt_crd_lyt_flt_lyt_clr]
-    [element.setMaximumSize(icon_size, icon_size) for element in col_lyt_crd_lyt_flt_lyt_cmc]
     
     create_collection_tab_grid()
 #Collection -> Filters -> Events
@@ -452,7 +445,7 @@ def create_collection_tab_grid():
         if ending_index < 0: ending_index = 0
 
         set_maximum_number_of_pages_and_update_info(cards_to_display, grid_sizes['cards_on_grid'], col_lyt_crd_lyt_tag_lyt_pag, col_lyt_crd_lyt_tag_lyt_inf)
-        download_card_images_for_current_page(database_connection, cards_to_display, starting_index, ending_index, config.get('COLLECTION', 'image_type'))
+        download_card_images_for_current_page(database_connection, cards_to_display, starting_index, ending_index, config.get('COLLECTION', 'image_extension'))
         
         x = 1
         y = 1
@@ -467,8 +460,8 @@ def create_collection_tab_grid():
                 
                 #Card image
                 card_image = QLabel()
-                create_card_image(card_image, cards_to_display[i], config.get('COLLECTION', 'image_type'), grid_sizes['card_width'], grid_sizes['card_height'])
-                col_lyt_crd_lyt_grd_lyt.addWidget(card_image, (y-1), (x-1))
+                create_card_image(card_image, cards_to_display[i], config.get('COLLECTION', 'image_extension'), grid_sizes['card_width'], grid_sizes['card_height'])
+                #col_lyt_crd_lyt_grd_lyt.addWidget(card_image, (y-1), (x-1))
                 
                 #Card info label
                 price_string = create_price_string(cards_to_display[i], database_cards)
@@ -477,12 +470,22 @@ def create_collection_tab_grid():
                 card_info = QLabel()
                 if cards_to_display[i] in collection_cards['id']: create_card_info(card_info, True, collection_cards, cards_to_display[i], price_string, currency_symbol)
                 else: create_card_info(card_info, False, collection_cards, cards_to_display[i], price_string, currency_symbol)
-                col_lyt_crd_lyt_grd_lyt.addWidget(card_info, (y-1), (x-1))
+                #col_lyt_crd_lyt_grd_lyt.addWidget(card_info, (y-1), (x-1))
                 
                 #Card extra info
                 card_extra_info = QLabel()
                 create_card_extra_info(card_extra_info)
-                col_lyt_crd_lyt_grd_lyt.addWidget(card_extra_info, (y-1), (x-1))
+                #col_lyt_crd_lyt_grd_lyt.addWidget(card_extra_info, (y-1), (x-1))
+                
+                groupbox = QGroupBox()
+                layout = QVBoxLayout()
+                groupbox.setLayout(layout)
+                layout.addWidget(card_info)
+                layout.addWidget(card_image)
+                if i % 2 == 0:
+                    card_extra_info.setText('')
+                layout.addWidget(card_extra_info)
+                col_lyt_crd_lyt_grd_lyt.addWidget(groupbox, (y-1), (x-1))
                 
                 if x % grid_sizes['cards_in_row'] != 0: x = x + 1
                 else:
@@ -493,24 +496,65 @@ def create_collection_tab_grid():
     last_height = grid_sizes['cards_in_col']
 
 #Progression
-def create_progression_tab():
+def create_progression_tab():    
     tab_bar.addTab(pro, config.get('APP', 'progression'))
     pro.setLayout(pro_lyt)
-    
     pro_lyt.addWidget(pro_lyt_scr)
     pro_lyt_scr.setWidget(pro_lyt_scr_grd)
-    pro_lyt_scr_grd.setLayout(pro_lyt_scr_grd_lyt)
+    pro_lyt_scr.setWidgetResizable(True)
     pro_lyt.addWidget(pro_lyt_inf)
+    pro_lyt_inf.setMinimumWidth(300)
     pro_lyt_inf.setLayout(pro_lyt_inf_lyt)
     
-    #DEBUG
-    lbl = QLabel('asd')
-    lbl.setMinimumSize(400,400)
-    pro_lyt_scr.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-    pro_lyt_scr.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-    pro_lyt_scr.setWidgetResizable(True)
-    pro_lyt_scr_grd_lyt.addWidget(lbl, 1, 1)
-    pro_lyt_inf_lyt.addWidget(lbl)
+    progression_refresh_grid()
+#Progression -> Events
+def progression_refresh_grid():
+    from os import path
+    from modules.ui_functions import find_all_sets_in_db
+    
+    sets = find_all_sets_in_db(database_connection)
+    in_collection = [database_cards['set'][i] for i, id in enumerate(database_cards['id']) if id in collection_cards['id']]
+    
+    i = 0
+    j = 0
+    for _set in sets:
+        groupbox = QGroupBox()
+        layout = QVBoxLayout()
+        groupbox.setLayout(layout)
+        
+        name = QLabel(f"{sets[_set][0]}")
+        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(name)
+        
+        type = QLabel(f"{sets[_set][1]}")
+        type.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(type)
+        
+        image = QLabel()
+        pixmap = QPixmap(f"{config.get('FOLDER', 'sets')}/dpa.svg")
+        if path.exists(f"{config.get('FOLDER', 'sets')}/{_set}.svg"): pixmap = QPixmap(f"{config.get('FOLDER', 'sets')}/{_set}.svg")
+        pixmap_scaled = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        image.setPixmap(pixmap_scaled)
+        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(image)
+        
+        progress_bar = QProgressBar()
+        progress_bar.setMaximum(sets[_set][3])
+        #progress_bar.setMaximumWidth(100)
+        progress_bar.setTextVisible(True)
+        progress_bar.setValue(in_collection.count(_set))
+        progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(progress_bar)
+        
+        progress_label = QLabel(f"{in_collection.count(_set)} / {progress_bar.maximum()}")
+        progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(progress_label)
+        
+        pro_lyt_scr_grd_lyt.addWidget(groupbox, i, j)
+        j += 1
+        if j % 5 == 0:
+            j = 0
+            i += 1
 
 #Decks
 def create_decks_tab():
@@ -577,8 +621,8 @@ def add_cards_list_selection_changed():
     from modules.database.functions import download_image_if_not_downloaded, update_card_count_in_add_cards
     
     current_index = add_lyt_gbx_lyt_lst.currentRow() if add_lyt_gbx_lyt_lst.currentRow() <= len(add_cards_found_cards)-1 else len(add_cards_found_cards)-1
-    download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], config.get('COLLECTION', 'image_type'))
-    file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{config.get('COLLECTION', 'image_type')}"
+    download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], config.get('COLLECTION', 'image_extension'))
+    file_name = f"{config.get('FOLDER', 'cards')}/{add_cards_found_cards[current_index]}.{config.get('COLLECTION', 'image_extension')}"
     pix = QPixmap(file_name)
     pix_scaled = pix.scaled(int(680 * 0.72), 680, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     add_lyt_gbx_lyt_res_lyt_iml.setPixmap(pix_scaled)

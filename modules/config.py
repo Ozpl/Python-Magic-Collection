@@ -53,6 +53,7 @@ class Config:
         self.config_parser['COLLECTION'] = {
             'show_database': 'false',
             'image_type': 'normal',
+            'image_extension': 'jpg',
             'price_source': 'eur',
             'price_currency': 'eur',
             'current_collection': 'maincollection',
@@ -97,7 +98,7 @@ class Config:
                 mkdir(f"./{self.config_parser['FOLDER'][folder]}")
     
     def build_file_structure(self) -> None:
-        from os import  path
+        from os import path
 
         for file in self.config_parser['FILE']:
             if file != 'config':

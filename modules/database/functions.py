@@ -198,7 +198,7 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_cards_ids_prices_list(connection: Connection, price_source: str) -> list:
+def get_cards_ids_prices_sets_list(connection: Connection, price_source: str) -> list:
     from ast import literal_eval
     from forex_python.converter import CurrencyRates, RatesNotAvailableError
     
@@ -207,7 +207,7 @@ def get_cards_ids_prices_list(connection: Connection, price_source: str) -> list
     try: rate = cr.get_rate('USD', currency.upper())
     except RatesNotAvailableError: rate = 1
     
-    query = f"SELECT id, prices FROM {get_database_table_name()} ORDER BY sort_key"
+    query = f'''SELECT id, prices, "set" FROM {get_database_table_name()} ORDER BY sort_key'''
     
     cursor = connection.cursor()
     cursor.execute(query)
@@ -243,6 +243,8 @@ def get_cards_ids_prices_list(connection: Connection, price_source: str) -> list
             if cards['prices_foil'][-1] is not None:
                 cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * rate, 2))
                 if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
+    
+    cards['set'] = [element[2] for element in record]
     
     return cards
 
