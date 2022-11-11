@@ -44,6 +44,9 @@ def split_line_to_list(card: str) -> list:
             last_index = i + 1
     split_card.append(card[last_index:])
     return split_card
+def download_all_images_in_collection(connection: Connection, collection_ids: list) -> None:
+    for id in collection_ids:
+        download_image_if_not_downloaded(connection, id, config.get('COLLECTION', 'image_extension'))
 
 #Corner widget
 def refresh_collection_names_in_corner(connection: Connection, combo_box: QComboBox, current_collection: str) -> None:

@@ -63,6 +63,8 @@ widget_hierarchy = [
                 {'name': 'pro_lyt_inf_lyt_typ', 'type': 'QButtonGroup'},
                 {'name': 'pro_lyt_inf_lyt_shw', 'type': 'QButtonGroup'},
 
+{'name': 'dck', 'type': 'QWidget'},
+
 {'name': 'add', 'type': 'QWidget'},
     {'name': 'add_lyt', 'type': 'QHBoxLayout'},
         {'name': 'add_lyt_gbx', 'type': 'QGroupBox'},
@@ -82,6 +84,8 @@ widget_hierarchy = [
                         {'name': 'add_lyt_gbx_lyt_res_lyt_adf', 'type': 'QPushButton'},
                         #TODO
                         #Set card count buttons
+
+{'name': 'wsh', 'type': 'QWidget'},
 
 {'name': 'imp', 'type': 'QWidget'},
     {'name': 'imp_lyt', 'type': 'QVBoxLayout'},
@@ -161,6 +165,8 @@ pro_lyt_inf_lyt = QVBoxLayout()
 pro_lyt_inf_lyt_typ = QButtonGroup()
 pro_lyt_inf_lyt_shw = QButtonGroup()
 
+dck = QWidget()
+
 add = QWidget()
 add_lyt = QHBoxLayout()
 add_lyt_gbx = QGroupBox()
@@ -178,6 +184,8 @@ add_lyt_gbx_lyt_res_lyt_iml = QLabel()
 add_lyt_gbx_lyt_res_lyt_iml_pix = QPixmap()
 add_lyt_gbx_lyt_res_lyt_adr = QPushButton('Add 1 regular')
 add_lyt_gbx_lyt_res_lyt_adf = QPushButton('Add 1 foil')
+
+wsh = QWidget()
 
 imp = QWidget()
 imp_lyt = QVBoxLayout()
@@ -222,10 +230,23 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     filtered_cards = []
 
+    tab_bar.currentChanged.connect(tab_changed)
+
     ui = UI()
     ui.showMaximized()
     #ui.show()
     app.exec()
+#Main -> Events
+def tab_changed(event):
+    #TODO
+    #Some sort of flags to figure out which tabs need refreshing
+    #0 - collection, 1 - progression, 2 - decks, 3 - add cards, 4 - wishlist, 5 - import/export, 6 - settings
+    if event == 0:
+        #create_collection_tab_grid()
+        pass
+    elif event == 1:
+        #progression_refresh()
+        pass
 
 #UI Class and its Events
 class UI(QWidget):
@@ -515,7 +536,7 @@ def create_collection_tab_grid():
     last_height = grid_sizes['cards_in_col']
 
 #Progression
-def create_progression_tab():    
+def create_progression_tab():
     tab_bar.addTab(pro, config.get('APP', 'progression'))
     pro.setLayout(pro_lyt)
     pro_lyt.addWidget(pro_lyt_scr)
@@ -667,9 +688,10 @@ def database_search(object):
     show_database_checked()
     collection_filters_searchbox_button_pressed()
     tab_bar.setCurrentIndex(0)
+
 #Decks
 def create_decks_tab():
-    pass
+    tab_bar.addTab(dck, config.get('APP', 'decks'))
 
 #Add cards
 def create_add_cards_tab():
@@ -763,7 +785,7 @@ def add_foil_button_pressed():
 
 #Wishlist
 def create_wishlist_tab():
-    pass
+    tab_bar.addTab(wsh, config.get('APP', 'wishlist'))
 
 #Import/export
 def create_import_export_tab():
@@ -820,7 +842,17 @@ def pattern_combobox_index_changed():
 def create_settings_tab():
     tab_bar.addTab(stt, config.get('APP', 'settings'))
     stt.setLayout(stt_lyt)
-
+    
+    download = QPushButton('Download all images in collection')
+    download.clicked.connect(download_all_clicked)
+    stt_lyt.addWidget(download)
+#Settings -> Events
+def download_all_clicked():
+    from modules.ui_functions import download_all_images_in_collection
+    from modules.database.collections import get_card_ids_from_collection, get_collections_formatted_name
+    
+    ids = get_card_ids_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
+    download_all_images_in_collection(database_connection, ids)
 
 '''
 #Collection Tab -> Cards Layout -> 1. Filter Buttons
