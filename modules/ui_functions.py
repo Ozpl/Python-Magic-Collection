@@ -1,8 +1,7 @@
 from sqlite3 import Connection
-from typing import Any
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGroupBox, QLabel, QPlainTextEdit
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit
 from modules.globals import config
 
 #Global functions
@@ -105,7 +104,7 @@ def calculate_grid_sizes(grid_widget: QGroupBox) -> dict:
     }
     
     return result
-def delete_widgets_from_layout(layout: Any) -> None:
+def delete_widgets_from_layout(layout: QGridLayout) -> None:
     for i in reversed(range(layout.count())): 
             layout.itemAt(i).widget().setParent(None)
 def prepare_list_of_cards_to_show(filtered_cards: list, database_cards: dict, collection_cards: dict) -> list:

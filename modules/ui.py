@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QButtonGroup, QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QHBoxLayout, QLabel, QLineEdit, QListWidget, QPlainTextEdit, QProgressBar, QPushButton, QRadioButton, QScrollArea, QTabWidget, QVBoxLayout, QWidget
+from PyQt6.QtSvgWidgets import QSvgWidget
 from modules.globals import config, TEMPLATE_PATTERNS, UI_PATTERN_LEGEND
 
 app = QApplication([])
@@ -55,8 +56,12 @@ widget_hierarchy = [
         {'name': 'pro_lyt_scr', 'type': 'QScrollArea'},
             {'name': 'pro_lyt_scr_grd', 'type': 'QWidget'},
                 {'name': 'pro_lyt_scr_grd_lyt', 'type': 'QGridLayout(pro_lyt_scr_grd)'},
+                    {'name': 'pro_lyt_scr_grd_lyt_col', 'type': 'QButtonGroup'},
+                    {'name': 'pro_lyt_scr_grd_lyt_dat', 'type': 'QButtonGroup'},
         {'name': 'pro_lyt_inf', 'type': 'QGroupBox'},
             {'name': 'pro_lyt_inf_lyt', 'type': 'QVBoxLayout'},
+                {'name': 'pro_lyt_inf_lyt_typ', 'type': 'QButtonGroup'},
+                {'name': 'pro_lyt_inf_lyt_shw', 'type': 'QButtonGroup'},
 
 {'name': 'add', 'type': 'QWidget'},
     {'name': 'add_lyt', 'type': 'QHBoxLayout'},
@@ -149,8 +154,12 @@ pro_lyt = QHBoxLayout()
 pro_lyt_scr = QScrollArea()
 pro_lyt_scr_grd = QWidget()
 pro_lyt_scr_grd_lyt = QGridLayout(pro_lyt_scr_grd)
+pro_lyt_scr_grd_lyt_col = QButtonGroup()
+pro_lyt_scr_grd_lyt_dat = QButtonGroup()
 pro_lyt_inf = QGroupBox()
 pro_lyt_inf_lyt = QVBoxLayout()
+pro_lyt_inf_lyt_typ = QButtonGroup()
+pro_lyt_inf_lyt_shw = QButtonGroup()
 
 add = QWidget()
 add_lyt = QHBoxLayout()
@@ -447,8 +456,7 @@ def create_collection_tab_grid():
         set_maximum_number_of_pages_and_update_info(cards_to_display, grid_sizes['cards_on_grid'], col_lyt_crd_lyt_tag_lyt_pag, col_lyt_crd_lyt_tag_lyt_inf)
         download_card_images_for_current_page(database_connection, cards_to_display, starting_index, ending_index, config.get('COLLECTION', 'image_extension'))
         
-        x = 1
-        y = 1
+        x, y = 1, 1
         for i in range(starting_index, ending_index):
             if i > len(cards_to_display) - 1:
                 #TODO
@@ -477,8 +485,19 @@ def create_collection_tab_grid():
                 create_card_extra_info(card_extra_info)
                 #col_lyt_crd_lyt_grd_lyt.addWidget(card_extra_info, (y-1), (x-1))
                 
+                #TODO
+                #Fix style for card_info label
                 groupbox = QGroupBox()
                 layout = QVBoxLayout()
+                stylesheet = f"""
+                    font: {config.get('APP', 'font')};
+                    font-size: {config.get('APP', 'font_size')}px;
+                    """
+                if config.get_boolean('COLLECTION', 'show_database'):
+                    stylesheet += "background-color: LightGrey" if 'Not collected' in card_info.text() else "background-color: LightSteelBlue"
+                else:
+                    stylesheet += "background-color: LightGrey"
+                groupbox.setStyleSheet(stylesheet)
                 groupbox.setLayout(layout)
                 layout.addWidget(card_info)
                 layout.addWidget(card_image)
@@ -504,58 +523,150 @@ def create_progression_tab():
     pro_lyt_scr.setWidgetResizable(True)
     pro_lyt.addWidget(pro_lyt_inf)
     pro_lyt_inf.setMinimumWidth(300)
+    pro_lyt_inf.setMaximumWidth(300)
     pro_lyt_inf.setLayout(pro_lyt_inf_lyt)
-    
-    progression_refresh_grid()
+    progression_create_widgets()
+    progression_refresh()
 #Progression -> Events
-def progression_refresh_grid():
-    from os import path
+def progression_create_widgets():
     from modules.ui_functions import find_all_sets_in_db
+    global progression_sets, progression_in_collection
     
-    sets = find_all_sets_in_db(database_connection)
-    in_collection = [database_cards['set'][i] for i, id in enumerate(database_cards['id']) if id in collection_cards['id']]
+    progression_sets = find_all_sets_in_db(database_connection)
+    progression_in_collection = [database_cards['set'][i] for i, id in enumerate(database_cards['id']) if id in collection_cards['id']]
     
-    i = 0
-    j = 0
-    for _set in sets:
-        groupbox = QGroupBox()
-        layout = QVBoxLayout()
-        groupbox.setLayout(layout)
+    pro_lyt_inf_lyt_typ.setExclusive(False)
+    pro_lyt_inf_lyt_typ.buttonClicked.connect(type_checked)
+    pro_lyt_inf_lyt.addWidget(QLabel('Set types to show:'))
+    
+    for i, type in enumerate(config.config_parser['PROGRESSION_TYPES']):
+        type_checkbox = QCheckBox(type.title().replace('_', ' '))
+        pro_lyt_inf_lyt_typ.addButton(type_checkbox, i)
+        if config.get_boolean('PROGRESSION_TYPES', type): type_checkbox.setChecked(True)
+        else: type_checkbox.setChecked(False)
+        pro_lyt_inf_lyt.addWidget(type_checkbox)
         
-        name = QLabel(f"{sets[_set][0]}")
-        name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(name)
+    pro_lyt_inf_lyt_shw.setExclusive(False)
+    pro_lyt_inf_lyt_typ.buttonClicked.connect(type_checked)
+    pro_lyt_inf_lyt.addWidget(QLabel('Set showing rules:'))
+    
+    for i, show in enumerate(config.config_parser['PROGRESSION_SHOW']):
+        show_checkbox = QCheckBox(f"Don't show {show} sets")
+        pro_lyt_inf_lyt_shw.addButton(show_checkbox, i)
+        if config.get_boolean('PROGRESSION_SHOW', show): show_checkbox.setChecked(True)
+        else: show_checkbox.setChecked(False)
+        pro_lyt_inf_lyt.addWidget(show_checkbox)
         
-        type = QLabel(f"{sets[_set][1]}")
-        type.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(type)
+    pro_lyt_inf_lyt_shw.buttonClicked.connect(show_checked)
+    
+    pro_lyt_inf_lyt.addWidget(QPlainTextEdit(f"Statistics:"))
+def progression_refresh():
+    from os import path
+    from modules.ui_functions import delete_widgets_from_layout
+    global progression_set_abbreviations
+    
+    delete_widgets_from_layout(pro_lyt_scr_grd_lyt)
+    
+    progression_set_abbreviations = []
+    fixed_width = 240
+    groupbox_width = 265
+    color_scale = ['c3d2c3', 'bbd2bb', 'b3d2b3', 'abd2ab', 'a3d1a3', '9bd19b', '93d193', '8bd08b', '82d082', '7ad07a', '72cf72', '6acf6a', '62cf62', '5ace5a', '52ce52', '4ace4a', '42ce42', '3acd3a', '32cd32']
+    
+    i, j = 0, 0
+    for _set in progression_sets:
+        if config.get_boolean('PROGRESSION_TYPES', f"{progression_sets[_set][1]}"):
+            if config.get_boolean('PROGRESSION_SHOW', 'completed'):
+                if progression_in_collection.count(_set) / progression_sets[_set][3] >= 1: continue
+            if config.get_boolean('PROGRESSION_SHOW', 'partial'):
+                if progression_in_collection.count(_set) / progression_sets[_set][3] < 1 and progression_in_collection.count(_set) != 0: continue
+            if config.get_boolean('PROGRESSION_SHOW', 'empty'):
+                if progression_in_collection.count(_set) <= 0: continue
         
-        image = QLabel()
-        pixmap = QPixmap(f"{config.get('FOLDER', 'sets')}/dpa.svg")
-        if path.exists(f"{config.get('FOLDER', 'sets')}/{_set}.svg"): pixmap = QPixmap(f"{config.get('FOLDER', 'sets')}/{_set}.svg")
-        pixmap_scaled = pixmap.scaled(100, 100, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-        image.setPixmap(pixmap_scaled)
-        image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(image)
-        
-        progress_bar = QProgressBar()
-        progress_bar.setMaximum(sets[_set][3])
-        #progress_bar.setMaximumWidth(100)
-        progress_bar.setTextVisible(True)
-        progress_bar.setValue(in_collection.count(_set))
-        progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(progress_bar)
-        
-        progress_label = QLabel(f"{in_collection.count(_set)} / {progress_bar.maximum()}")
-        progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(progress_label)
-        
-        pro_lyt_scr_grd_lyt.addWidget(groupbox, i, j)
-        j += 1
-        if j % 5 == 0:
-            j = 0
-            i += 1
-
+            if progression_in_collection.count(_set) == 0: groupbox_stylesheet = f"background-color: #D3D3D3"
+            else: groupbox_stylesheet = f"background-color: #{color_scale[0]}"
+            
+            for index in range(len(color_scale)):
+                percentage = (index+1)/(len(color_scale)-1)
+                current_value = progression_in_collection.count(_set) / progression_sets[_set][3]
+                if current_value > percentage:
+                    groupbox_stylesheet = f"background-color: #{color_scale[index]}"
+            
+            groupbox = QGroupBox()
+            groupbox.setStyleSheet(groupbox_stylesheet)
+            layout = QVBoxLayout()
+            groupbox.setLayout(layout)
+            
+            name = QLabel(f"{progression_sets[_set][0]} [{_set.upper()}]")
+            name.setWordWrap(True)
+            name.setFixedHeight(60)
+            name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            layout.addWidget(name)
+            
+            image = QSvgWidget(f"{config.get('FOLDER', 'sets')}/dpa.svg")
+            if path.isfile(f"{config.get('FOLDER', 'sets')}/{_set}.svg"): image = QSvgWidget(f"{config.get('FOLDER', 'sets')}/{_set}.svg")
+            image.setFixedSize(125, 125)
+            image.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
+            layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignCenter)        
+            
+            progress_bar = QProgressBar()
+            value = progression_in_collection.count(_set)
+            maximum = progression_sets[_set][3]
+            division = round(value/maximum*100)
+            if division == 0 and value > 0: division = 1 
+            progress_bar.setMaximum(100)
+            progress_bar.setTextVisible(True)
+            progress_bar.setValue(division)
+            progress_bar.setFixedWidth(fixed_width)
+            layout.addWidget(progress_bar, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            progress_label = QLabel(f"{value} / {maximum}")
+            layout.addWidget(progress_label, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            show_set_col = QPushButton('Show set in collection')
+            show_set_col.setFixedWidth(fixed_width)
+            layout.addWidget(show_set_col, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            show_set_db = QPushButton('Show set in database')
+            show_set_db.setFixedWidth(fixed_width)
+            layout.addWidget(show_set_db, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            groupbox.setFixedWidth(groupbox_width)
+            pro_lyt_scr_grd_lyt.addWidget(groupbox, i, j)
+            
+            pro_lyt_scr_grd_lyt_col.addButton(show_set_col, i * 8 + j)
+            pro_lyt_scr_grd_lyt_dat.addButton(show_set_db, i * 8 + j)
+            progression_set_abbreviations.append(_set)
+            
+            j += 1
+            if j % 8 == 0:
+                j = 0
+                i += 1
+    
+    pro_lyt_scr_grd_lyt_col.buttonClicked.connect(collection_search)
+    pro_lyt_scr_grd_lyt_dat.buttonClicked.connect(database_search)
+def type_checked(object):
+    button_pressed = f"{pro_lyt_inf_lyt_typ.buttons()[pro_lyt_inf_lyt_typ.id(object)].text().lower().replace(' ', '_')}"
+    button_value = f"{str(pro_lyt_inf_lyt_typ.buttons()[pro_lyt_inf_lyt_typ.id(object)].isChecked()).lower()}"
+    config.set('PROGRESSION_TYPES', button_pressed, button_value)
+    progression_refresh()
+def show_checked(object):
+    button_pressed = f"{pro_lyt_inf_lyt_shw.buttons()[pro_lyt_inf_lyt_shw.id(object)].text()}"
+    button_value = f"{str(pro_lyt_inf_lyt_shw.buttons()[pro_lyt_inf_lyt_shw.id(object)].isChecked()).lower()}"
+    buttons = ['completed', 'partial', 'empty']
+    [config.set('PROGRESSION_SHOW', element, button_value) for element in buttons if element in button_pressed]
+    progression_refresh()
+def collection_search(object):
+    cor_lyt_chk.setChecked(False)
+    col_lyt_crd_lyt_flt_lyt_sbx.setText(f"s:{progression_set_abbreviations[pro_lyt_scr_grd_lyt_col.id(object)]}")
+    show_database_checked()
+    collection_filters_searchbox_button_pressed()
+    tab_bar.setCurrentIndex(0)
+def database_search(object):
+    cor_lyt_chk.setChecked(True)
+    col_lyt_crd_lyt_flt_lyt_sbx.setText(f"s:{progression_set_abbreviations[pro_lyt_scr_grd_lyt_dat.id(object)]}")
+    show_database_checked()
+    collection_filters_searchbox_button_pressed()
+    tab_bar.setCurrentIndex(0)
 #Decks
 def create_decks_tab():
     pass
@@ -618,7 +729,7 @@ def add_cards_search_button_pressed():
     add_lyt_gbx_lyt_lst.setCurrentRow(add_lyt_gbx_lyt_lst.count()-1)
 #Add cards -> List -> Events
 def add_cards_list_selection_changed():
-    from modules.database.functions import download_image_if_not_downloaded, update_card_count_in_add_cards
+    from modules.ui_functions import download_image_if_not_downloaded, update_card_count_in_add_cards
     
     current_index = add_lyt_gbx_lyt_lst.currentRow() if add_lyt_gbx_lyt_lst.currentRow() <= len(add_cards_found_cards)-1 else len(add_cards_found_cards)-1
     download_image_if_not_downloaded(database_connection, add_cards_found_cards[current_index], config.get('COLLECTION', 'image_extension'))

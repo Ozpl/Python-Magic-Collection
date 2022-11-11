@@ -61,6 +61,35 @@ class Config:
             'current_filter': '',
             'current_filtered_page': '1'
         }
+        self.config_parser['PROGRESSION_TYPES'] = {            
+            'core' : 'true',
+            'expansion' : 'true',
+            'draft_innovation' : 'true',
+            'masters' : 'true',
+            'commander' : 'true',
+            'box' : 'true',
+            'spellbook' : 'false',
+            'from_the_vault' : 'false',
+            'duel_deck' : 'false',
+            'premium_deck' : 'false',
+            'masterpiece' : 'false',
+            'arsenal' : 'false',
+            'promo' : 'false',
+            'starter' : 'false',
+            'archenemy' : 'false',
+            'planechase' : 'false',
+            'treasure_chest' : 'false',
+            'vanguard' : 'false',
+            'alchemy' : 'false',
+            'memorabilia' : 'false',
+            'funny' : 'false',
+            'token' : 'false'
+        }
+        self.config_parser['PROGRESSION_SHOW'] = {
+            'completed': 'false',
+            'partial': 'false',
+            'empty': 'false',
+        }
         self.save()
         self.load()
 
