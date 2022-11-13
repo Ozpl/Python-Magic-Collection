@@ -238,15 +238,20 @@ def create_user_interface(db_connection, cl_connection, cd_connection):
     app.exec()
 #Main -> Events
 def tab_changed(event):
-    #TODO
-    #Some sort of flags to figure out which tabs need refreshing
     #0 - collection, 1 - progression, 2 - decks, 3 - add cards, 4 - wishlist, 5 - import/export, 6 - settings
-    if event == 0:
-        #create_collection_tab_grid()
-        pass
-    elif event == 1:
-        #progression_refresh()
-        pass
+    if event == 0 and config.get_boolean('FLAG', 'collection_needs_refreshing'):
+        create_collection_tab_grid()
+        config.set('FLAG', 'collection_needs_refreshing', 'false')
+        
+    elif event == 1 and config.get_boolean('FLAG', 'progression_needs_refreshing'):
+        progression_refresh()
+        config.set('FLAG', 'progression_needs_refreshing', 'false')
+        
+    elif event == 2 and config.get_boolean('FLAG', 'decks_needs_refreshing'):
+        config.set('FLAG', 'decks_needs_refreshing', 'false')
+        
+    elif event == 4 and config.get_boolean('FLAG', 'wishlist_needs_refreshing'):
+        config.set('FLAG', 'wishlist_needs_refreshing', 'false')
 
 #UI Class and its Events
 class UI(QWidget):
@@ -351,7 +356,12 @@ def current_collection_index_changed():
         filtered_cards = []
         last_width = -1
         last_height = -1
-        create_collection_tab_grid()
+        
+        if tab_bar.currentIndex() == 0: create_collection_tab_grid()
+        else: config.set('FLAG', 'collection_needs_refreshing', 'true')
+        
+        if tab_bar.currentIndex() == 1: progression_refresh()
+        else: config.set('FLAG', 'progression_needs_refreshing', 'true')
 def show_database_checked():
     global last_width, last_height
     config.set('COLLECTION', 'show_database', 'true') if cor_lyt_chk.isChecked() else config.set('COLLECTION', 'show_database', 'false')
@@ -384,12 +394,13 @@ def create_collection_tab():
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_tag)
     col_lyt_crd_lyt_tag.setLayout(col_lyt_crd_lyt_tag_lyt)
     col_lyt_crd_lyt_tag_lyt.addWidget(col_lyt_crd_lyt_tag_lyt_pag)
+    col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
+    if col_lyt_crd_lyt_tag_lyt_pag.value() == 0: col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
     col_lyt_crd_lyt_tag_lyt_pag.setWrapping(False)
     col_lyt_crd_lyt_tag_lyt_pag.setDecimals(0)
     col_lyt_crd_lyt_tag_lyt_pag.setMinimum(1)
     col_lyt_crd_lyt_tag_lyt_pag.setMaximum(99999)
     col_lyt_crd_lyt_tag_lyt_pag.valueChanged.connect(page_control_value_changed)
-    col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
     col_lyt_crd_lyt_tag_lyt.addWidget(col_lyt_crd_lyt_tag_lyt_inf)
     col_lyt_crd_lyt.addWidget(col_lyt_crd_lyt_grd)
     col_lyt_crd_lyt_grd.setLayout(col_lyt_crd_lyt_grd_lyt)
@@ -417,7 +428,8 @@ def create_collection_tab():
     icon_size = col_lyt_crd_lyt_flt.height()-27 
     [element.setMaximumSize(icon_size, icon_size) for element in col_lyt_crd_lyt_flt_lyt_clr]
     
-    create_collection_tab_grid()
+    if config.get('COLLECTION', 'current_filter'): col_lyt_crd_lyt_flt_lyt_sbx.setText(config.get('COLLECTION', 'current_filter'))
+    collection_filters_searchbox_button_pressed()
 #Collection -> Filters -> Events
 def searchbox_editing_finished():
     collection_filters_searchbox_button_pressed()
@@ -430,8 +442,14 @@ def collection_filters_searchbox_button_pressed():
     
     if col_lyt_crd_lyt_flt_lyt_sbx.text():
         filtered_cards = get_card_ids_list(database_connection, construct_query(col_lyt_crd_lyt_flt_lyt_sbx.text()))
+        config.set('COLLECTION', 'current_filter', f"{col_lyt_crd_lyt_flt_lyt_sbx.text()}")
+    else:
+        config.set('COLLECTION', 'current_filter', '')
         
-    col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
+    col_lyt_crd_lyt_tag_lyt_pag.setMaximum(99999)
+    col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
+    if len(filtered_cards) > 0: col_lyt_crd_lyt_tag_lyt_pag.setValue(1)
+    
     last_width = -1
     last_height = -1
     col_lyt_crd_lyt_tag_lyt_pag.setFocus()
@@ -440,14 +458,22 @@ def collection_filters_searchbox_button_pressed():
 def searchbox_clear_button_pressed():
     global filtered_cards, last_width, last_height
     col_lyt_crd_lyt_flt_lyt_sbx.clear()
+    config.set('COLLECTION', 'current_filter', '')
     filtered_cards = []
     last_width = -1
     last_height = -1
+    col_lyt_crd_lyt_tag_lyt_pag.setMaximum(99999)
+    col_lyt_crd_lyt_tag_lyt_pag.setValue(config.get_int('COLLECTION', 'current_page'))
     create_collection_tab_grid()
 #Collection -> Tags -> Events
 def page_control_value_changed():
     global last_width, last_height
-    config.set('COLLECTION', 'current_page', str(int(col_lyt_crd_lyt_tag_lyt_pag.value())))
+    if col_lyt_crd_lyt_tag_lyt_pag.value() > 0:
+        if len(filtered_cards) > 0: config.set('COLLECTION', 'current_filtered_page', str(int(col_lyt_crd_lyt_tag_lyt_pag.value())))
+        else: config.set('COLLECTION', 'current_page', str(int(col_lyt_crd_lyt_tag_lyt_pag.value())))
+    else:
+        if len(filtered_cards) > 0: config.set('COLLECTION', 'current_filtered_page', '1')
+        else: config.set('COLLECTION', 'current_page', '1')
     last_width = -1
     last_height = -1
     create_collection_tab_grid()
@@ -465,9 +491,9 @@ def create_collection_tab_grid():
         delete_widgets_from_layout(col_lyt_crd_lyt_grd_lyt)
         
         cards_to_display = prepare_list_of_cards_to_show(filtered_cards, database_cards, collection_cards)
-        #TODO
-        #Set pagination here for filtered cards, when filter is on: set page to one and when the filter is off: return to previously viewed page
-        current_page = config.get_int('COLLECTION', 'current_page')
+        
+        if len(filtered_cards) > 0: current_page = config.get_int('COLLECTION', 'current_filtered_page')
+        else: current_page = config.get_int('COLLECTION', 'current_page')
 
         starting_index = (current_page - 1) * grid_sizes['cards_on_grid']
         ending_index = (current_page - 1) * grid_sizes['cards_on_grid'] + grid_sizes['cards_on_grid']
@@ -494,7 +520,8 @@ def create_collection_tab_grid():
                 
                 #Card info label
                 price_string = create_price_string(cards_to_display[i], database_cards)
-                currency_symbol = create_currency_string(price_string)
+                currency_symbol = ''
+                if price_string: currency_symbol = create_currency_string()
                 
                 card_info = QLabel()
                 if cards_to_display[i] in collection_cards['id']: create_card_info(card_info, True, collection_cards, cards_to_display[i], price_string, currency_symbol)
@@ -550,12 +577,6 @@ def create_progression_tab():
     progression_refresh()
 #Progression -> Events
 def progression_create_widgets():
-    from modules.ui_functions import find_all_sets_in_db
-    global progression_sets, progression_in_collection
-    
-    progression_sets = find_all_sets_in_db(database_connection)
-    progression_in_collection = [database_cards['set'][i] for i, id in enumerate(database_cards['id']) if id in collection_cards['id']]
-    
     pro_lyt_inf_lyt_typ.setExclusive(False)
     pro_lyt_inf_lyt_typ.buttonClicked.connect(type_checked)
     pro_lyt_inf_lyt.addWidget(QLabel('Set types to show:'))
@@ -583,12 +604,33 @@ def progression_create_widgets():
     pro_lyt_inf_lyt.addWidget(QPlainTextEdit(f"Statistics:"))
 def progression_refresh():
     from os import path
-    from modules.ui_functions import delete_widgets_from_layout
+    from modules.ui_functions import create_currency_string, delete_widgets_from_layout, find_all_sets_in_db
     global progression_set_abbreviations
     
     delete_widgets_from_layout(pro_lyt_scr_grd_lyt)
     
+    progression_sets = find_all_sets_in_db(database_connection)
+    [progression_sets[_set].append(0) for _set in progression_sets]
+    [progression_sets[_set].append(0) for _set in progression_sets]
+    progression_sets_in_collection = []
+    progression_value = []
     progression_set_abbreviations = []
+    for i, id in enumerate(database_cards['id']):
+        if id in collection_cards['id']:
+            progression_sets_in_collection.append(database_cards['set'][i])
+            index = collection_cards['id'].index(id)
+            value = 0
+            if database_cards['prices_regular'][i]: value += float(database_cards['prices_regular'][i]) * collection_cards['regular'][index]
+            if database_cards['prices_foil'][i]: value += float(database_cards['prices_foil'][i]) * collection_cards['foil'][index]
+            progression_value.append(value)
+        if database_cards['prices_regular'][i]:
+            progression_sets[database_cards['set'][i]][5] += float(database_cards['prices_regular'][i])
+    
+    for i, _set in enumerate(progression_sets_in_collection): progression_sets[_set][4] += progression_value[i]
+    for _set in progression_sets:
+        progression_sets[_set][4] = round(progression_sets[_set][4], 2)
+        progression_sets[_set][5] = round(progression_sets[_set][5], 2)
+    
     fixed_width = 240
     groupbox_width = 265
     color_scale = ['c3d2c3', 'bbd2bb', 'b3d2b3', 'abd2ab', 'a3d1a3', '9bd19b', '93d193', '8bd08b', '82d082', '7ad07a', '72cf72', '6acf6a', '62cf62', '5ace5a', '52ce52', '4ace4a', '42ce42', '3acd3a', '32cd32']
@@ -597,18 +639,18 @@ def progression_refresh():
     for _set in progression_sets:
         if config.get_boolean('PROGRESSION_TYPES', f"{progression_sets[_set][1]}"):
             if config.get_boolean('PROGRESSION_SHOW', 'completed'):
-                if progression_in_collection.count(_set) / progression_sets[_set][3] >= 1: continue
+                if progression_sets_in_collection.count(_set) / progression_sets[_set][3] >= 1: continue
             if config.get_boolean('PROGRESSION_SHOW', 'partial'):
-                if progression_in_collection.count(_set) / progression_sets[_set][3] < 1 and progression_in_collection.count(_set) != 0: continue
+                if progression_sets_in_collection.count(_set) / progression_sets[_set][3] < 1 and progression_sets_in_collection.count(_set) != 0: continue
             if config.get_boolean('PROGRESSION_SHOW', 'empty'):
-                if progression_in_collection.count(_set) <= 0: continue
+                if progression_sets_in_collection.count(_set) <= 0: continue
         
-            if progression_in_collection.count(_set) == 0: groupbox_stylesheet = f"background-color: #D3D3D3"
+            if progression_sets_in_collection.count(_set) == 0: groupbox_stylesheet = f"background-color: #D3D3D3"
             else: groupbox_stylesheet = f"background-color: #{color_scale[0]}"
             
             for index in range(len(color_scale)):
                 percentage = (index+1)/(len(color_scale)-1)
-                current_value = progression_in_collection.count(_set) / progression_sets[_set][3]
+                current_value = progression_sets_in_collection.count(_set) / progression_sets[_set][3]
                 if current_value > percentage:
                     groupbox_stylesheet = f"background-color: #{color_scale[index]}"
             
@@ -625,12 +667,12 @@ def progression_refresh():
             
             image = QSvgWidget(f"{config.get('FOLDER', 'sets')}/dpa.svg")
             if path.isfile(f"{config.get('FOLDER', 'sets')}/{_set}.svg"): image = QSvgWidget(f"{config.get('FOLDER', 'sets')}/{_set}.svg")
-            image.setFixedSize(125, 125)
+            image.setFixedSize(150, 150)
             image.renderer().setAspectRatioMode(Qt.AspectRatioMode.KeepAspectRatio)
             layout.addWidget(image, alignment=Qt.AlignmentFlag.AlignCenter)        
             
             progress_bar = QProgressBar()
-            value = progression_in_collection.count(_set)
+            value = progression_sets_in_collection.count(_set)
             maximum = progression_sets[_set][3]
             division = round(value/maximum*100)
             if division == 0 and value > 0: division = 1 
@@ -642,6 +684,12 @@ def progression_refresh():
             
             progress_label = QLabel(f"{value} / {maximum}")
             layout.addWidget(progress_label, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            value = QLabel(f"Current value of set: {round(progression_sets[_set][4], 2)}{create_currency_string()}")
+            layout.addWidget(value, alignment=Qt.AlignmentFlag.AlignCenter)
+            
+            price_1 = QLabel(f"Price of whole regular set x1: {round(progression_sets[_set][5], 2)}{create_currency_string()}")
+            layout.addWidget(price_1, alignment=Qt.AlignmentFlag.AlignCenter)
             
             show_set_col = QPushButton('Show set in collection')
             show_set_col.setFixedWidth(fixed_width)
@@ -770,7 +818,8 @@ def add_regular_button_pressed():
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 1, 0, 'add')
     update_card_count_in_add_cards(collections_connection, add_cards_found_cards, current_index, add_lyt_gbx_lyt_res_lyt_lbl)
     cards_in_collection = get_card_ids_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
-    create_collection_tab_grid()
+    config.set('FLAG', 'collection_needs_refreshing', 'true')
+    config.set('FLAG', 'progression_needs_refreshing', 'true')
 #Add cards -> Foil -> Events
 def add_foil_button_pressed():
     from modules.database.collections import get_card_ids_from_collection
@@ -781,7 +830,8 @@ def add_foil_button_pressed():
     add_card_to_collection_in_add_cards(database_connection, collections_connection, add_cards_found_cards, add_cards_sorted_list, current_index, 0, 1, 'add')
     update_card_count_in_add_cards(collections_connection, add_cards_found_cards, current_index, add_lyt_gbx_lyt_res_lyt_lbl)
     cards_in_collection = get_card_ids_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
-    create_collection_tab_grid()
+    config.set('FLAG', 'collection_needs_refreshing', 'true')
+    config.set('FLAG', 'progression_needs_refreshing', 'true')
 
 #Wishlist
 def create_wishlist_tab():

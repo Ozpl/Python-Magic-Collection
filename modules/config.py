@@ -14,7 +14,11 @@ class Config:
             'database_was_created': 'false',
             'collections_was_created': 'false',
             'decks_was_created': 'false',
-            'corner_refreshing': 'false'
+            'corner_refreshing': 'false',
+            'collection_needs_refreshing': 'false',
+            'progression_needs_refreshing': 'false',
+            'decks_needs_refreshing': 'false',
+            'wishlist_needs_refreshing': 'false'
         }
         self.config_parser['FOLDER'] = {
             'database': 'database',
@@ -55,7 +59,7 @@ class Config:
             'image_type': 'normal',
             'image_extension': 'jpg',
             'price_source': 'eur',
-            'price_currency': 'eur',
+            'price_currency': 'pln',
             'current_collection': 'maincollection',
             'current_page': '1',
             'current_filter': '',
@@ -68,13 +72,13 @@ class Config:
             'masters' : 'true',
             'commander' : 'true',
             'box' : 'true',
-            'spellbook' : 'false',
-            'from_the_vault' : 'false',
-            'duel_deck' : 'false',
-            'premium_deck' : 'false',
-            'masterpiece' : 'false',
-            'arsenal' : 'false',
-            'promo' : 'false',
+            'spellbook' : 'true',
+            'from_the_vault' : 'true',
+            'duel_deck' : 'true',
+            'premium_deck' : 'true',
+            'masterpiece' : 'true',
+            'arsenal' : 'true',
+            'promo' : 'true',
             'starter' : 'false',
             'archenemy' : 'false',
             'planechase' : 'false',
@@ -88,7 +92,7 @@ class Config:
         self.config_parser['PROGRESSION_SHOW'] = {
             'completed': 'false',
             'partial': 'false',
-            'empty': 'false',
+            'empty': 'true',
         }
         self.save()
         self.load()

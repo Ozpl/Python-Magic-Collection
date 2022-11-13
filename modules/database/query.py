@@ -128,7 +128,10 @@ def handle_query_when_string_literal(table: str, column: str, value: str, comman
 def handle_query_when_string_multiple_columns(table: str, columns: str, value: str, command: str) -> str:
     # "set" LIKE 'dom' OR set_name LIKE 'dom'
     value = value.replace('"',"")
-    query = " OR ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'" for column in columns])
+    if 'set_name' in columns and len(value) == 3:
+        query = f"""{table}."set" = '{value}'"""
+    else:
+        query = " OR ".join([f"{table}.{column} {'LIKE' if command.find('-') == -1 else 'NOT LIKE'} '%{value}%'" for column in columns])
     return query
 
 def handle_query_when_string_array(table: str, column: str, value: str, command: str) -> str:
@@ -247,8 +250,5 @@ def construct_query_when(query_string: str) -> str:
 
 def construct_query(query_string = None) -> str:
     table_name = get_database_table_name()
-    query = f'SELECT id FROM {table_name} '
-
-    query += construct_query_when(query_string)
-    query += ' ORDER BY sort_key'
+    query = f"SELECT id FROM {table_name} {construct_query_when(query_string)} ORDER BY sort_key"
     return query

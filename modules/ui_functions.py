@@ -1,7 +1,7 @@
 from sqlite3 import Connection
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit
+from PyQt6.QtCore import Qt, QObject, QEvent
+from PyQt6.QtGui import QMouseEvent, QPixmap
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit, QWidget
 from modules.globals import config
 
 #Global functions
@@ -16,11 +16,10 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
 
     if not path.exists(file_name):
         card = get_card_from_db(connection, id)
-        
-        if card['image_uris']:
-            image_uris = card['image_uris']
-        elif card['card_faces']:
-            image_uris = literal_eval(card['card_faces'])[0]['image_uris']
+        try:
+            if card['image_uris']: image_uris = card['image_uris']
+            elif card['card_faces']: image_uris = literal_eval(card['card_faces'])[0]['image_uris']
+        except KeyError: return
             
         r = get(image_uris[config.get('COLLECTION', 'image_type')], stream = True)
         if r.status_code == 200:
@@ -127,9 +126,14 @@ def prepare_list_of_cards_to_show(filtered_cards: list, database_cards: dict, co
         
     return cards_to_display
 def set_maximum_number_of_pages_and_update_info(cards_to_display: list, cards_on_grid: int, page_control_widget: QDoubleSpinBox, info_widget: QLabel) -> None:
-    if len(cards_to_display) == 0: page_control_widget.setMaximum(1)
-    elif len(cards_to_display) % cards_on_grid == 0: page_control_widget.setMaximum(len(cards_to_display) / cards_on_grid)
-    else: page_control_widget.setMaximum(len(cards_to_display) / cards_on_grid + 1)
+    from math import floor
+    
+    maximum = 1
+    if len(cards_to_display) % cards_on_grid == 0: maximum = (len(cards_to_display) / cards_on_grid)
+    else: maximum = floor(len(cards_to_display) / cards_on_grid + 1)
+    if maximum < 1: maximum = 1
+    
+    page_control_widget.setMaximum(maximum)
     
     info_widget.setText(f'Found {len(cards_to_display)} cards and there are {int(page_control_widget.maximum())} pages.')
 def download_card_images_for_current_page(connection: Connection, cards_to_display: list, start: int, end: int, image_extension: str) -> None:
@@ -157,12 +161,11 @@ def create_price_string(card: str, database_cards: dict) -> str:
     else: price_string += 'N/A'
     
     return price_string
-def create_currency_string(price_str: str) -> str:
+def create_currency_string() -> str:
     currency_symbol = ''
-    if price_str:
-        if config.get('COLLECTION', 'price_currency') == 'eur': currency_symbol = '€'
-        elif config.get('COLLECTION', 'price_currency') == 'usd': currency_symbol = '$'
-        else: currency_symbol += f" {config.get('COLLECTION', 'price_currency').upper()}"
+    if config.get('COLLECTION', 'price_currency') == 'eur': currency_symbol = '€'
+    elif config.get('COLLECTION', 'price_currency') == 'usd': currency_symbol = '$'
+    else: currency_symbol += f" {config.get('COLLECTION', 'price_currency').upper()}"
     return currency_symbol
 def create_card_image(card_image: QLabel, card: str, image_extension: str, card_width: int, card_height: int) -> None:
     card_image.setObjectName('image')
@@ -173,6 +176,11 @@ def create_card_image(card_image: QLabel, card: str, image_extension: str, card_
     pixmap = QPixmap(f"{config.get('FOLDER', 'cards')}/{card}.{image_extension}")
     pixmap_scaled = pixmap.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     card_image.setPixmap(pixmap_scaled)
+    card_image.mousePressEvent = card_image_mouse_pressed
+def card_image_mouse_pressed(event: QMouseEvent):
+    #TODO
+    #Card clicking and previewing
+    print(event.globalPosition())
 def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: dict, card: str, price_string: str, currency_symbol: str) -> None:
     card_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
     card_info.setMaximumHeight(20)

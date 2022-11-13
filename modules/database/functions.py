@@ -59,7 +59,7 @@ def create_sort_key_string(card: dict) -> str:
     
     color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
     color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
-    color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WBR': '24', 'UBG': '25' }
+    color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WUR': '24', 'UBG': '25' }
     color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
     
     colors_flag = False
