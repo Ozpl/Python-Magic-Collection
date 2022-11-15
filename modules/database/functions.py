@@ -198,22 +198,17 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_cards_ids_prices_sets_list(connection: Connection, price_source: str) -> list:
+def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: str) -> list:
     from ast import literal_eval
-    from forex_python.converter import CurrencyRates, RatesNotAvailableError
+    from modules.globals import CURRENCY, EXCHANGE_RATE
     
-    cr = CurrencyRates()
-    currency = config.get('COLLECTION', 'price_currency')
-    try: rate = cr.get_rate('USD', currency.upper())
-    except RatesNotAvailableError: rate = 1
-    
-    query = f'''SELECT id, prices, "set" FROM {get_database_table_name()} ORDER BY sort_key'''
+    query = f'''SELECT id, prices, "set", card_faces FROM {get_database_table_name()} ORDER BY sort_key'''
     
     cursor = connection.cursor()
     cursor.execute(query)
     record = cursor.fetchall()
 
-    cards = {'id': [], 'prices_regular': [], 'prices_foil': []}
+    cards = {'id': [], 'prices_regular': [], 'prices_foil': [], 'set': [], 'flip': []}
     
     cards['id'] = [element[0] for element in record]
     
@@ -236,15 +231,23 @@ def get_cards_ids_prices_sets_list(connection: Connection, price_source: str) ->
                 cards['prices_regular'].append(prices['usd'])
                 cards['prices_foil'].append(prices['usd_foil'])
             
-        if currency not in ['usd', 'eur', 'tix']:
+        if CURRENCY not in ['usd', 'eur', 'tix']:
             if cards['prices_regular'][-1] is not None:
-                cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * rate, 2))
+                cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * EXCHANGE_RATE, 2))
                 if cards['prices_regular'][-1].index('.') == len(cards['prices_regular'][-1])-2: cards['prices_regular'][-1] = cards['prices_regular'][-1] + '0'
             if cards['prices_foil'][-1] is not None:
-                cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * rate, 2))
+                cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * EXCHANGE_RATE, 2))
                 if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
     
     cards['set'] = [element[2] for element in record]
+    
+    for element in record:
+        if element[3]:
+            card_faces = literal_eval(element[3])
+            if card_faces[0].get('image_uris'):
+                cards['flip'].append(True)
+            else: cards['flip'].append(False)
+        else: cards['flip'].append(False)
     
     return cards
 

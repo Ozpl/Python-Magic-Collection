@@ -1,6 +1,6 @@
 from sqlite3 import Connection
-from PyQt6.QtCore import Qt, QObject, QEvent
-from PyQt6.QtGui import QMouseEvent, QPixmap
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
 from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit, QWidget
 from modules.globals import config
 
@@ -13,19 +13,26 @@ def download_image_if_not_downloaded(connection: Connection, id: str, image_exte
     from modules.database.functions import get_card_from_db
     
     file_name = f"{config.get('FOLDER', 'cards')}/{id}.{image_extension}"
-
+    
     if not path.exists(file_name):
         card = get_card_from_db(connection, id)
+        image_uris = []
         try:
-            if card['image_uris']: image_uris = card['image_uris']
-            elif card['card_faces']: image_uris = literal_eval(card['card_faces'])[0]['image_uris']
+            if card['image_uris']: image_uris.append(card['image_uris'])
+            elif card['card_faces']:
+                cards_faces = literal_eval(card['card_faces'])
+                for face in cards_faces:
+                    image_uris.append(face['image_uris'])
         except KeyError: return
-            
-        r = get(image_uris[config.get('COLLECTION', 'image_type')], stream = True)
-        if r.status_code == 200:
-            r.raw.decode_content = True
-            with open(file_name,'wb') as f:
-                copyfileobj(r.raw, f)
+                    
+        for i, uris in enumerate(image_uris):
+            face_number = f"-{i}" if i > 0 else ''
+            file_name = f"{config.get('FOLDER', 'cards')}/{id}{face_number}.{image_extension}"
+            r = get(uris[config.get('COLLECTION', 'image_type')], stream = True)
+            if r.status_code == 200:
+                r.raw.decode_content = True
+                with open(file_name,'wb') as f:
+                    copyfileobj(r.raw, f)
 def split_line_to_list(card: str) -> list:
     last_index = 0
     opened_quatation = False
@@ -176,11 +183,6 @@ def create_card_image(card_image: QLabel, card: str, image_extension: str, card_
     pixmap = QPixmap(f"{config.get('FOLDER', 'cards')}/{card}.{image_extension}")
     pixmap_scaled = pixmap.scaled(card_width, card_height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     card_image.setPixmap(pixmap_scaled)
-    card_image.mousePressEvent = card_image_mouse_pressed
-def card_image_mouse_pressed(event: QMouseEvent):
-    #TODO
-    #Card clicking and previewing
-    print(event.globalPosition())
 def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: dict, card: str, price_string: str, currency_symbol: str) -> None:
     card_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
     card_info.setMaximumHeight(20)
@@ -205,10 +207,45 @@ def create_card_info(card_info: QLabel, in_collection: bool, collection_cards: d
     
     card_info.setText(card_info_text)
 def create_card_extra_info(card_extra_info: QLabel) -> None:
-    card_extra_info.setText('Right click to flip card')
+    card_extra_info.setText('')
     card_extra_info.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
     #card_extra_info.setStyleSheet("background-color: gainsboro")
     card_extra_info.setMaximumHeight(20)
+def prepare_card_description(card: dict) -> str:
+    from ast import literal_eval
+    
+    description = ''
+    if card['flavor_name']: description += f"{card['flavor_name']}"
+    else: description += f"{card['name']}"
+    if card['mana_cost']: description +=  f" - {card['mana_cost']}"
+    if card['type_line']: description +=  f"\n\n{card['type_line']}"
+        
+    description += f"\n"
+    
+    if card['rarity']: description += f"{'Mythic rare' if card['rarity'] == 'mythic' else card['rarity'].capitalize()} — "
+    if card['set_name']: description += f"{card['set_name']}"
+    if card['collector_number']: description += f" ({card['collector_number']})"
+    if card['set']: description += f" [{card['set'].upper()}]"
+        
+    description += f"\n-----------"
+    
+    if card['oracle_text']: card['oracle_text'] = card['oracle_text'].replace('\n', '\n\n')
+    
+    if not card['card_faces']:
+        if card['oracle_text']: description += f"\n\n{card['oracle_text']}"
+        if card['power']: description += f"\n{card['power']}/{card['toughness']}"
+        if card['flavor_text']: description += f"\n\n---\n{card['flavor_text']}"
+    else:
+        card_faces = literal_eval(card['card_faces'])
+        for i, face in enumerate(card_faces):
+            if face['oracle_text']:
+                if i == 0: description += f"\nFront side"
+                elif i == 1: description += f"\nBack side"
+                description += f"\n\n{face['oracle_text']}"
+            if face['power']: description += f"\n{face['power']}/{face['toughness']}"
+            if face.get('flavor_text'): description += f"\n\n---\n{face['flavor_text']}"
+        
+    return description
 
 #Progression
 def find_all_sets_in_db(connection: Connection) -> dict:
