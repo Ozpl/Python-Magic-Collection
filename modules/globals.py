@@ -13,6 +13,7 @@ except RatesNotAvailableError: EXCHANGE_RATE = 1
 #DATABASE
 DATABASE_INSERT_TO_MAIN = []
 DEFAULT_SEARCH_COLUMNS = ['name', 'type_line', 'oracle_text']
+SORTING_ATTRIBUTES = ['colors', 'produced_mana', 'cmc', 'name', 'released_at', 'price']
 UI_PATTERN_LEGEND = """Available symbols:
 Required:
     %n - card's name

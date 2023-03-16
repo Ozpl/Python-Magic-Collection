@@ -214,24 +214,25 @@ imp_lyt_gbx_lyt_res_lyt_scr = QPlainTextEdit()
 stt = QWidget()
 stt_lyt = QVBoxLayout()
 
-#Main
-def create_user_interface(db_connection, cl_connection, cd_connection):
+def create_user_interface(db_connection, cl_connection, dk_connection):
     from modules.database.collections import get_cards_from_collection
     from modules.database.functions import get_cards_ids_prices_sets_flip_list
     from modules.logging import console_log
-    global database_connection, collections_connection, cards_connection, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards
+    global database_connection, collections_connection, decks_connection, currency_exchange_rate, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards
     console_log('info', 'Creating UI')
 
     database_connection = db_connection
     collections_connection = cl_connection
-    cards_connection = cd_connection
-
-    database_cards = get_cards_ids_prices_sets_flip_list(database_connection, config.get('COLLECTION', 'price_source'))
+    decks_connection = dk_connection
+    
+    currency_exchange_rate = config.get_float('COLLECTION', 'exchange_rate')
+    
+    database_cards = get_cards_ids_prices_sets_flip_list(database_connection, config.get('COLLECTION', 'price_source'), currency_exchange_rate)
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     collection_filtered_cards = []
 
     tab_bar.currentChanged.connect(tab_changed)
-
+    
     ui = UI()
     ui.showMaximized()
     #ui.show()

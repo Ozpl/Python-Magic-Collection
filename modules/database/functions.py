@@ -32,9 +32,18 @@ def prepare_records_for_load_transaction(card: dict, main: list) -> None:
                     to_main.append(card[element])
         except KeyError:
             to_main.append(None)
-
-    sort_key = create_sort_key_string(card)
-    to_main.append(sort_key)
+    sort_key_colors = create_sort_key_string(card, 'colors')
+    to_main.append(sort_key_colors)
+    sort_key_produced_mana = create_sort_key_string(card, 'produced_mana')
+    to_main.append(sort_key_produced_mana)
+    sort_key_cmc = create_sort_key_string(card, 'cmc')
+    to_main.append(sort_key_cmc)
+    sort_key_name = create_sort_key_string(card, 'name')
+    to_main.append(sort_key_name)
+    sort_key_released_at = create_sort_key_string(card, 'released_at')
+    to_main.append(sort_key_released_at)
+    sort_key_price = create_sort_key_string(card, 'price')
+    to_main.append(sort_key_price)
 
     to_main = tuple(to_main)
     main.append(to_main)
@@ -53,43 +62,26 @@ def sort_key_colors_mapping(array: list, color_map: dict) -> str:
                 continue
     return '35'
 
-def create_sort_key_string(card: dict) -> str:
+def create_sort_key_string(card: dict, attribute: str) -> str:
     '''Create sort_key string, to properly sort cards in collection by its value.'''
-    sort_key = ''        
+    sort_key = ''
     
     color_map_one = { 'W': '01', 'U': '02', 'B': '03', 'R': '04', 'G': '05' }
     color_map_two = { 'WU': '06', 'WB': '07', 'UB': '08', 'UR': '09', 'BR': '10', 'BG': '11', 'RG': '12', 'WR': '13', 'WG': '14', 'UG': '15' }
     color_map_three = { 'WUB': '16', 'UBR': '17', 'BRG': '18', 'WRG': '19', 'WUG': '20', 'WBR': '21', 'URG': '22', 'WBG': '23', 'WUR': '24', 'UBG': '25' }
     color_map_four = { 'UBRG': '26', 'WBRG': '27', 'WURG': '28', 'WUBG': '29', 'WUBR': '30' }
     
-    colors_flag = False
-    #Colors for double cards
-    try:
-        colors = []
-        if card['card_faces']:
-            if card['card_faces'][0]['colors']:
-                for color in card['card_faces'][0]['colors']:
-                    colors.append(color)
-            colors = list(set(colors))
-            
-        match (len(colors)):
-            case 1: sort_key = sort_key_colors_mapping(colors, color_map_one)
-            case 2: sort_key = sort_key_colors_mapping(colors, color_map_two)
-            case 3: sort_key = sort_key_colors_mapping(colors, color_map_three)
-            case 4: sort_key = sort_key_colors_mapping(colors, color_map_four)
-            case 5: sort_key = '31'
-            case 0: sort_key = '32'
-        if 'Basic' in card['type_line']: sort_key = '33'
-        elif 'Land' in card['type_line']: sort_key = '34'
-        elif 'Token' in card['type_line']: sort_key = '35'
-        colors_flag = True
-    except KeyError:
-        sort_key = '36'
-        
-    #Colors
-    if not colors_flag:
+    if attribute == 'colors':
+        colors_flag = False
+        #Colors for double cards
         try:
-            colors = card['colors']
+            colors = []
+            if card['card_faces']:
+                if card['card_faces'][0]['colors']:
+                    for color in card['card_faces'][0]['colors']:
+                        colors.append(color)
+                colors = list(set(colors))
+                
             match (len(colors)):
                 case 1: sort_key = sort_key_colors_mapping(colors, color_map_one)
                 case 2: sort_key = sort_key_colors_mapping(colors, color_map_two)
@@ -100,45 +92,114 @@ def create_sort_key_string(card: dict) -> str:
             if 'Basic' in card['type_line']: sort_key = '33'
             elif 'Land' in card['type_line']: sort_key = '34'
             elif 'Token' in card['type_line']: sort_key = '35'
+            colors_flag = True
         except KeyError:
             sort_key = '36'
-    
-    #Mana produced
-    #FIXME
-    #Land can produce C as a color and can also produce nothing and have None as a type
-    try:
-        '''
-        if 'Evolving Wilds' in card['name']:
-            print()
-        '''
-        produced_mana = card['produced_mana']
-        
-        if 'Land' not in card['type_line']:
-            sort_key += '00'
-        else:
-            match (len(produced_mana)):
-                case 1: sort_key += sort_key_colors_mapping(produced_mana, color_map_one)
-                case 2: sort_key += sort_key_colors_mapping(produced_mana, color_map_two)
-                case 3: sort_key += sort_key_colors_mapping(produced_mana, color_map_three)
-                case 4: sort_key += sort_key_colors_mapping(produced_mana, color_map_four)
-                case 5: sort_key += '31'
-                case 0: sort_key += '32'
-    except KeyError:
-        sort_key += '00'
-
+            
+        #Colors
+        if not colors_flag:
+            try:
+                colors = card['colors']
+                match (len(colors)):
+                    case 1: sort_key = sort_key_colors_mapping(colors, color_map_one)
+                    case 2: sort_key = sort_key_colors_mapping(colors, color_map_two)
+                    case 3: sort_key = sort_key_colors_mapping(colors, color_map_three)
+                    case 4: sort_key = sort_key_colors_mapping(colors, color_map_four)
+                    case 5: sort_key = '31'
+                    case 0: sort_key = '32'
+                if 'Basic' in card['type_line']: sort_key = '33'
+                elif 'Land' in card['type_line']: sort_key = '34'
+                elif 'Token' in card['type_line']: sort_key = '35'
+            except KeyError:
+                sort_key = '36'
+    elif attribute == 'produced_mana':
+        #Mana produced
+        #FIXME
+        #Land can produce C as a color and can also produce nothing and have None as a type
+        try:
+            '''
+            if 'Evolving Wilds' in card['name']:
+                print()
+            '''
+            produced_mana = card['produced_mana']
+            
+            if 'Land' not in card['type_line']:
+                sort_key = '00'
+            else:
+                match (len(produced_mana)):
+                    case 1: sort_key = sort_key_colors_mapping(produced_mana, color_map_one)
+                    case 2: sort_key = sort_key_colors_mapping(produced_mana, color_map_two)
+                    case 3: sort_key = sort_key_colors_mapping(produced_mana, color_map_three)
+                    case 4: sort_key = sort_key_colors_mapping(produced_mana, color_map_four)
+                    case 5: sort_key = '31'
+                    case 0: sort_key = '32'
+        except KeyError:
+            sort_key = '00'
+    elif attribute == 'cmc':
     #CMC
-    try:
-        cmc = str(int(card['cmc']))
-        sort_key += cmc if len(cmc) > 1 else f'0{cmc}'
-    except KeyError: sort_key += '99'
+        try:
+            cmc = str(int(card['cmc']))
+            sort_key = cmc if len(cmc) > 1 else f'0{cmc}'
+        except KeyError: sort_key = '99'
+    elif attribute == 'name':
+        #Name
+        try: sort_key = card['name'].lower().replace(' ', '')
+        except KeyError: pass
+    elif attribute == 'released_at':
+        #Date
+        try: sort_key = card['released_at']
+        except: pass
+    elif attribute == 'price':
+        #TODO
+        sort_key = '000000'
+        
+    return sort_key
 
-    #Name
-    try: sort_key += card['name'].lower().replace(' ', '')
-    except KeyError: pass
+def get_combined_sort_keys_from_db(connection: Connection) -> list:
+    from modules.globals import SORTING_ATTRIBUTES
+    
+    sort_keys = []    
+    sort_key_string = ''
+    for attribute in SORTING_ATTRIBUTES:
+        sort_key_string += f"sort_key_{attribute}, "
+    sort_key_string = sort_key_string[:-2]
+    
+    query = f'''
+        SELECT {sort_key_string} FROM {get_database_table_name()}
+        '''
+        
+    cursor = connection.cursor()
+    cursor.execute(query)
+    records = cursor.fetchall()
+    
+    for record in records:
+        sort_key = ''
+        for element in record:
+            sort_key += element
+        sort_keys.append(sort_key)
+        
+    return sort_keys
 
-    #Date
-    try: sort_key += card['released_at']
-    except: pass
+def get_combined_card_sort_key(connection: Connection, id: str) -> str:
+    from modules.globals import SORTING_ATTRIBUTES
+    
+    sort_key_string = ''
+    for attribute in SORTING_ATTRIBUTES:
+        sort_key_string += f"sort_key_{attribute}, "
+    sort_key_string = sort_key_string[:-2]
+    
+    query = f'''
+        SELECT {sort_key_string} FROM {get_database_table_name()}
+        WHERE id = "{id}"
+        '''
+        
+    cursor = connection.cursor()
+    cursor.execute(query)
+    record = cursor.fetchone()
+    
+    sort_key = ''
+    for element in record:
+        sort_key += element
         
     return sort_key
 
@@ -198,16 +259,19 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: str) -> list:
+def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: str, exchange_rate: float) -> list:
     from ast import literal_eval
-    from modules.globals import CURRENCY, EXCHANGE_RATE
+    from modules.globals import SORTING_ATTRIBUTES
     
-    query = f'''SELECT id, prices, "set", card_faces FROM {get_database_table_name()} ORDER BY sort_key'''
+    query = f'''SELECT id, prices, "set", card_faces FROM {get_database_table_name()} ORDER BY '''
+    for attribute in SORTING_ATTRIBUTES: query += f'sort_key_{attribute}, '
+    query = query[:-2]
     
     cursor = connection.cursor()
     cursor.execute(query)
     record = cursor.fetchall()
 
+    price_currency = config.get('COLLECTION', 'price_currency')
     cards = {'id': [], 'prices_regular': [], 'prices_foil': [], 'set': [], 'flip': []}
     
     cards['id'] = [element[0] for element in record]
@@ -231,12 +295,12 @@ def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: st
                 cards['prices_regular'].append(prices['usd'])
                 cards['prices_foil'].append(prices['usd_foil'])
             
-        if CURRENCY not in ['usd', 'eur', 'tix']:
+        if price_currency not in ['usd', 'eur', 'tix']:
             if cards['prices_regular'][-1] is not None:
-                cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * EXCHANGE_RATE, 2))
+                cards['prices_regular'][-1] = str(round(float(cards['prices_regular'][-1]) * exchange_rate, 2))
                 if cards['prices_regular'][-1].index('.') == len(cards['prices_regular'][-1])-2: cards['prices_regular'][-1] = cards['prices_regular'][-1] + '0'
             if cards['prices_foil'][-1] is not None:
-                cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * EXCHANGE_RATE, 2))
+                cards['prices_foil'][-1] = str(round(float(cards['prices_foil'][-1]) * exchange_rate, 2))
                 if cards['prices_foil'][-1].index('.') == len(cards['prices_foil'][-1])-2: cards['prices_foil'][-1] = cards['prices_foil'][-1] + '0'
     
     cards['set'] = [element[2] for element in record]

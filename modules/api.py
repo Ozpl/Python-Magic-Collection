@@ -18,6 +18,7 @@ def download_bulk_json_file(url: str, file_name: str) -> None:
 
 def get_data_from_scryfall() -> None:
     from datetime import datetime
+    from forex_python.converter import CurrencyRates, RatesNotAvailableError
     
     bulk_response = get_bulk_data_response(config.get('BULK', 'url'))
     bulk_data_type = config.get('BULK', 'data_type')
@@ -29,5 +30,10 @@ def get_data_from_scryfall() -> None:
         config.set('FLAG', 'downloaded_from_scryfall', 'true')
         download_bulk_json_file(bulk_uri, bulk_data_type)
         config.set('BULK', 'last_updated', str(datetime.now().strftime(config.get('TIME', 'format_full'))))
+        
+        cr = CurrencyRates()
+        try: currency_exchange_rate = cr.get_rate('USD', config.get('COLLECTION', 'price_currency').upper())
+        except RatesNotAvailableError: currency_exchange_rate = 1
+        config.set('COLLECTION', 'exchange_rate', str(currency_exchange_rate))
     else:
         config.set('FLAG', 'downloaded_from_scryfall', 'false')

@@ -1,3 +1,5 @@
+from typing import Any
+
 class Config:
     '''Class which stores all settable variables as strings in .ini file using ConfigParser library. Use 'set_value' and 'get_x', where x can be 'bool', 'int', 'float' or 'value'.'''
     def __init__(self) -> None:
@@ -60,6 +62,7 @@ class Config:
             'image_extension': 'jpg',
             'price_source': 'eur',
             'price_currency': 'pln',
+            'exchange_rate': '1.0',
             'current_collection': 'maincollection',
             'current_page': '1',
             'current_filter': '',
@@ -87,7 +90,8 @@ class Config:
             'alchemy' : 'false',
             'memorabilia' : 'false',
             'funny' : 'false',
-            'token' : 'false'
+            'token' : 'false',
+            'minigame': 'false'
         }
         self.config_parser['PROGRESSION_SHOW'] = {
             'completed': 'false',
@@ -117,10 +121,10 @@ class Config:
 
     def get(self, section: str, option: str) -> str:
         self.load()
-        return self.config_parser[section.upper()][option.lower().lower()]
+        return self.config_parser[section.upper()][option.lower()]
 
-    def set(self, section: str, option: str, value: str) -> None:
-        self.config_parser[section.upper()][option.lower()] = value
+    def set(self, section: str, option: str, value: Any) -> None:
+        self.config_parser[section.upper()][option.lower()] =  str(value)
         self.save()
 
     def build_folder_structure(self) -> None:

@@ -43,6 +43,7 @@ def get_column_names_and_types() -> dict:
 
 def create_database_table(connection: Connection) -> None:
     from modules.database.functions import get_database_table_name
+    from modules.globals import SORTING_ATTRIBUTES
     from modules.logging import console_log
 
     console_log('info', f"Creating {get_database_table_name()} in database")
@@ -69,9 +70,11 @@ def create_database_table(connection: Connection) -> None:
             case 'datetime': query += f'\n{element} DATETIME,'
 
         DATABASE_INSERT_TO_MAIN.append(element)
-
-    query += '\nsort_key TEXT)'
-
+    
+    for attribute in SORTING_ATTRIBUTES:
+        query += f'\nsort_key_{attribute} TEXT,'
+    query = f"{query[:-1]})"
+    
     cursor = connection.cursor()
     cursor.execute(query)
     connection.commit()

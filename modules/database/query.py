@@ -1,5 +1,5 @@
 from modules.database.functions import get_database_table_name
-from modules.globals import DEFAULT_SEARCH_COLUMNS
+from modules.globals import DEFAULT_SEARCH_COLUMNS, SORTING_ATTRIBUTES
 
 QUERY_TRANSLATE = [
     {
@@ -250,5 +250,6 @@ def construct_query_when(query_string: str) -> str:
 
 def construct_query(query_string = None) -> str:
     table_name = get_database_table_name()
-    query = f"SELECT id FROM {table_name} {construct_query_when(query_string)} ORDER BY sort_key"
-    return query
+    query = f"SELECT id FROM {table_name} {construct_query_when(query_string)} ORDER BY "
+    for attribute in SORTING_ATTRIBUTES: query += f'sort_key_{attribute}, '
+    return query[:-2]
