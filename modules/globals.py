@@ -1,14 +1,7 @@
-from forex_python.converter import CurrencyRates, RatesNotAvailableError
 from modules.config import Config
 
 #CONFIG
 config = Config()
-
-#CURRENCY
-CURRENCY_RATES = CurrencyRates()
-CURRENCY = config.get('COLLECTION', 'price_currency')
-try: EXCHANGE_RATE = CURRENCY_RATES.get_rate('USD', CURRENCY.upper())
-except RatesNotAvailableError: EXCHANGE_RATE = 1
 
 #DATABASE
 DATABASE_INSERT_TO_MAIN = []

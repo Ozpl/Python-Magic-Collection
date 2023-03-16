@@ -1,7 +1,7 @@
 from sqlite3 import Connection
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
-from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit, QWidget
+from PyQt5.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QGridLayout, QGroupBox, QLabel, QPlainTextEdit
 from modules.globals import config
 
 #Global functions
@@ -238,11 +238,11 @@ def prepare_card_description(card: dict) -> str:
     else:
         card_faces = literal_eval(card['card_faces'])
         for i, face in enumerate(card_faces):
-            if face['oracle_text']:
+            if face.get('oracle_text'):
                 if i == 0: description += f"\nFront side"
-                elif i == 1: description += f"\nBack side"
+                elif i == 1: description += f"\n-----------\nBack side"
                 description += f"\n\n{face['oracle_text']}"
-            if face['power']: description += f"\n{face['power']}/{face['toughness']}"
+            if face.get('power'): description += f"\n{face['power']}/{face['toughness']}"
             if face.get('flavor_text'): description += f"\n\n---\n{face['flavor_text']}"
         
     return description
@@ -290,8 +290,8 @@ def update_card_count_in_add_cards(connection: Connection, found_cards: list, cu
     label.setText(f"You currently have {selected_card['regular']} regulars and {selected_card['foil']} foils in collection")
 def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection: Connection, found_cards: list, sorted_list: list, current_row: int, regular: int, foil: int, mode: str) -> None:
     from modules.database.collections import add_card_to_collection
-    from modules.database.functions import create_sort_key_string, get_card_from_db
-    
+    from modules.database.functions import get_combined_card_sort_key
+        
     add_card_to_collection(
         cl_connection,
         config.get('COLLECTION', 'current_collection'), 
@@ -299,13 +299,14 @@ def add_card_to_collection_in_add_cards(db_connection: Connection, cl_connection
         regular,
         foil,
         mode,
-        create_sort_key_string(get_card_from_db(db_connection, sorted_list[current_row]['id']))
-        )
+        get_combined_card_sort_key(db_connection, found_cards[current_row])
+        )    
 
 #Import/export tab
 def process_import_list(db_connection: Connection, col_connection: Connection, import_list: list, pattern: str, results_plaintextedit: QPlainTextEdit, errors_plaintextedit: QPlainTextEdit, header_checkbox: QCheckBox) -> None:
     from modules.database.collections import create_collection
-    from modules.database.functions import get_all_cards_from_pattern_as_joined_string, get_card_ids_list, get_database_table_name
+    from modules.database.functions import get_combined_sort_keys_from_db, get_all_cards_from_pattern_as_joined_string, get_card_ids_list, get_database_table_name
+    from modules.globals import SORTING_ATTRIBUTES
     from modules.logging import console_log
     
     
@@ -330,9 +331,10 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
     console_log('INFO', 'Imported list processed, compiling database info')
     
     cards_to_import = get_unique_cards_to_import(patterned_cards)
+    
     db_info = {
         'ids': get_card_ids_list(db_connection, f'SELECT id FROM {get_database_table_name()}'),
-        'sort_keys': get_card_ids_list(db_connection, f'SELECT sort_key FROM {get_database_table_name()}'),
+        'sort_keys': get_combined_sort_keys_from_db(db_connection),
         '%s%c': get_all_cards_from_pattern_as_joined_string(db_connection, ['set_name', 'collector_number']),
         '%n%c': get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'collector_number']),
         '%n%s': get_all_cards_from_pattern_as_joined_string(db_connection, ['name', 'set_name'])
@@ -401,6 +403,10 @@ def handle_names_and_sets_exceptions(split_card: dict) -> dict:
     sets = [
         ' Variants'
     ]
+    
+    #DEBUG
+    if 'Grisly Salvage' in names and 'FNM Promos' in sets:
+        pass
     
     full_pattern = r'.* \(\d+\)'
     parenthesis = r' \(\d+\)'

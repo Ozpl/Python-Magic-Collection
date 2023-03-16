@@ -259,9 +259,15 @@ def get_card_ids_list(connection: Connection, query: str) -> list:
 
     return card_ids
 
-def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: str, exchange_rate: float) -> list:
+def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: str) -> list:
     from ast import literal_eval
     from modules.globals import SORTING_ATTRIBUTES
+    from forex_python.converter import CurrencyRates, RatesNotAvailableError
+    
+    currency_rates = CurrencyRates()
+    currency = config.get('COLLECTION', 'price_currency')
+    try: exchange_rate = currency_rates.get_rate('USD', currency.upper())
+    except RatesNotAvailableError: exchange_rate = 1
     
     query = f'''SELECT id, prices, "set", card_faces FROM {get_database_table_name()} ORDER BY '''
     for attribute in SORTING_ATTRIBUTES: query += f'sort_key_{attribute}, '

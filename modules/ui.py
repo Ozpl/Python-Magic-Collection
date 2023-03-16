@@ -218,16 +218,14 @@ def create_user_interface(db_connection, cl_connection, dk_connection):
     from modules.database.collections import get_cards_from_collection
     from modules.database.functions import get_cards_ids_prices_sets_flip_list
     from modules.logging import console_log
-    global database_connection, collections_connection, decks_connection, currency_exchange_rate, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards
+    global database_connection, collections_connection, decks_connection, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards
     console_log('info', 'Creating UI')
 
     database_connection = db_connection
     collections_connection = cl_connection
     decks_connection = dk_connection
     
-    currency_exchange_rate = config.get_float('COLLECTION', 'exchange_rate')
-    
-    database_cards = get_cards_ids_prices_sets_flip_list(database_connection, config.get('COLLECTION', 'price_source'), currency_exchange_rate)
+    database_cards = get_cards_ids_prices_sets_flip_list(database_connection, config.get('COLLECTION', 'price_source'))
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     collection_filtered_cards = []
 
@@ -597,9 +595,14 @@ def card_image_mouse_pressed(event: QMouseEvent):
             return
 #Collection -> Preview -> Events
 def update_preview(card: dict, object_name: str):
-    from modules.globals import CURRENCY, EXCHANGE_RATE
     from modules.database.collections import get_card_from_collection
     from modules.ui_functions import prepare_card_description
+    from forex_python.converter import CurrencyRates, RatesNotAvailableError
+    
+    currency_rates = CurrencyRates()
+    currency = config.get('COLLECTION', 'price_currency')
+    try: exchange_rate = currency_rates.get_rate('USD', currency.upper())
+    except RatesNotAvailableError: exchange_rate = 1
     
     card_in_col = get_card_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'), card['id'])
     regular = card_in_col['regular']
@@ -609,21 +612,21 @@ def update_preview(card: dict, object_name: str):
     
     prices = [card['prices']['usd'], card['prices']['usd_foil'], card['prices']['usd_etched'], card['prices']['eur'], card['prices']['eur_foil'], card['prices']['tix']]
     source = config.get('COLLECTION', 'price_source')
-    if CURRENCY not in ['usd', 'eur', 'tix']:
+    if currency not in ['usd', 'eur', 'tix']:
         if card['prices'][f"{source}"]:
-            price = str(round(float(card['prices'][f"{source}"]) * EXCHANGE_RATE, 2))
+            price = str(round(float(card['prices'][f"{source}"]) * exchange_rate, 2))
             if price.index('.') == len(price)-2: price += '0'
             prices.append(price)
         else: prices.append('N/A')
         
         if card['prices'][f"{source}_foil"]:
-            price = str(round(float(card['prices'][f"{source}_foil"]) * EXCHANGE_RATE, 2))
+            price = str(round(float(card['prices'][f"{source}_foil"]) * exchange_rate, 2))
             if price.index('.') == len(price)-2: price += '0'
             prices.append(price)
         else: prices.append('N/A')
         
         if source == 'usd':
-            price = str(round(float(card['prices'][f"{source}_etched"]) * EXCHANGE_RATE, 2))
+            price = str(round(float(card['prices'][f"{source}_etched"]) * exchange_rate, 2))
             if price.index('.') == len(price)-2: price += '0'
             prices.append(price)
         else: prices.append('N/A')
@@ -633,7 +636,7 @@ def update_preview(card: dict, object_name: str):
         elif i in range(0,3): prices[i] += '$'
         elif i in range(3,5): prices[i] += '€'
         elif i == 5: prices[i] += ' TIX'
-        else: prices[i] += f' {CURRENCY.upper()}'
+        else: prices[i] += f' {currency.upper()}'
     
     prices_string = f"\nRegular: {prices[0]} / {prices[3]}"
     if len(prices) > 6: prices_string += f" / {prices[6]}"
