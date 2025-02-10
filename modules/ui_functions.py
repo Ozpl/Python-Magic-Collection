@@ -384,6 +384,7 @@ def process_import_list(db_connection: Connection, col_connection: Connection, i
 def handle_names_and_sets_exceptions(split_card: dict) -> dict:
     import re
     
+    #Most cases for MTGBollectionBuilder
     names = [
         ' (Showcase)',
         ' (Borderless)' ,
@@ -395,19 +396,17 @@ def handle_names_and_sets_exceptions(split_card: dict) -> dict:
         ' (b)',
         ' (No PW Symbol)',
         ' (Dracula)',
+        ' (Schematic)',
         ' (Skyscraper)' ,
         ' (Gilded Foil)',
         ' (Thick Stock)',
-        ' (Non-Foil)'
+        ' (Non-Foil)',
+        ' (Scene)'
     ]
     sets = [
         ' Variants'
     ]
-    
-    #DEBUG
-    if 'Grisly Salvage' in names and 'FNM Promos' in sets:
-        pass
-    
+       
     full_pattern = r'.* \(\d+\)'
     parenthesis = r' \(\d+\)'
     regex = re.compile(full_pattern)
@@ -421,6 +420,81 @@ def handle_names_and_sets_exceptions(split_card: dict) -> dict:
     for element in sets:
         if element in split_card['%s']:
             split_card['%s'] = split_card['%s'].replace(element, '')
+    
+    #Single cards for MTGBollectionBuilder
+    mtg_cb_singles = [     
+        { 'from_s': 'FNM Promos', 'to_s': 'Friday Night Magic 2013', 'from_n': 'Grisly Salvage', 'from_c': '162', 'to_c': '11'},
+        { 'from_s': 'Release Event Promos', 'to_s': 'Rise of the Eldrazi Promos', 'from_n': 'Lord of Shatterskull Pass', 'from_c': '24', 'to_c': '156★'},
+        { 'from_s': 'Release Event Promos', 'to_s': 'Journey into Nyx Promos', 'from_n': 'Dictate of the Twin Gods', 'from_c': '41', 'to_c': '93★'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Magic Origins Promos', 'from_n': 'Relic Seeker', 'from_c': '25', 'to_c': '29'},
+        { 'from_s': 'Release Event Promos', 'to_s': 'Oath of the Gatewatch Promos', 'from_n': 'Endbringer', 'from_c': '49', 'to_c': '3'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': 'Necropolis Fiend', 'from_c': '7', 'to_c': '1'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': "Hero's Downfall", 'from_c': '8', 'to_c': '2'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': 'Sultai Ascendancy', 'from_c': '9', 'to_c': '3'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': 'Reaper of the Wilds', 'from_c': '10', 'to_c': '4'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': 'Whip of Erebos', 'from_c': '11', 'to_c': '5'},
+        { 'from_s': 'Clash Pack Promos', 'to_s': 'Fate Reforged Clash Pack', 'from_n': 'Courser of Kruphix', 'from_c': '12', 'to_c': '6'},
+        { 'from_s': 'Gift Box Promos', 'to_s': 'Khans of Tarkir Promos', 'from_n': 'Sultai Charm', 'from_c': '3', 'to_c': '204'},
+        { 'from_s': 'Game Day Promos', 'to_s': 'Eldritch Moon Promos', 'from_n': 'Unsubstantiate', 'from_c': '61', 'to_c': '79'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Amonkhet Promos', 'from_n': 'Archfiend of Ifnir', 'from_c': '32', 'to_c': '78'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Core Set 2020', 'from_n': 'Rienne, Angel of Rebirth', 'from_c': '52', 'to_c': '281'},
+        { 'from_s': 'Promo Pack: Core Set 2020', 'to_s': 'Dominaria Promos', 'from_n': 'Gilded Lotus', 'from_c': '118', 'to_c': '215p'},
+        { 'from_s': 'Promo Pack: Throne of Eldraine', 'to_s': 'Throne of Eldraine', 'from_n': 'Improbable Alliance', 'from_c': '4', 'to_c': '396'},
+        { 'from_s': 'Promo Pack: Throne of Eldraine', 'to_s': 'Throne of Eldraine Promos', 'from_n': 'Wishclaw Talisman', 'to_n': 'Wishclaw Talisman', 'from_c': '34', 'to_c': '110p'},
+        { 'from_s': 'Promo Pack: Throne of Eldraine', 'to_s': 'Throne of Eldraine Promos', 'from_n': 'Emry, Lurker of the Loch', 'from_c': '17', 'to_c': '43p'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Theros Beyond Death', 'from_n': 'Athreos, Shroud-Veiled', 'from_c': '54', 'to_c': '269'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Theros Beyond Death Promos', 'from_n': 'Atris, Oracle of Half-Truths', 'from_c': '1473', 'to_c': '209s'},
+        { 'from_s': 'Promo Pack: Theros Beyond Death', 'to_s': 'Theros Beyond Death', 'from_n': 'Thirst for Meaning', 'from_c': '2', 'to_c': '354'},
+        { 'from_s': 'Promo Pack: Theros Beyond Death', 'to_s': 'Theros Beyond Death Promos', 'from_n': 'Underworld Breach', 'from_c': '41', 'to_c': '161p'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Ikoria: Lair of Behemoths Promos', 'from_n': 'Emergent Ultimatum', 'from_c': '1531', 'to_c': '185s'},
+        { 'from_s': 'Promo Pack: Ikoria', 'to_s': 'Ikoria: Lair of Behemoths Promos', 'from_n': 'Gyruda, Doom of Depths', 'from_c': '56', 'to_c': '221p'},
+        { 'from_s': 'Promo Pack: Ikoria', 'to_s': 'Ikoria: Lair of Behemoths Promos', 'from_n': 'Keruga, the Macrosage', 'from_c': '59', 'to_c': '225p'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Double Masters', 'from_n': 'Chord of Calling', 'from_c': '1644', 'to_c': '384'},
+        { 'from_s': 'Promo Pack: Zendikar Rising', 'to_s': 'Zendikar Rising Promos', 'from_n': 'Thieving Skydiver', 'from_c': '25', 'to_c': '85p'},
+        { 'from_s': 'Promo Pack: Zendikar Rising', 'to_s': 'Zendikar Rising Promos', 'from_n': 'Skyclave Relic', 'from_c': '71', 'to_c': '252p'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Commander Legends', 'from_n': 'Sengir, the Dark Baron', 'from_c': '1729', 'to_c': '722'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Kaldheim', 'from_n': 'Realmwalker', 'from_c': '59', 'to_c': '399'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Throne of Eldraine', 'from_n': 'Kenrith, the Returned King (Non-Foil)', 'to_n': 'Kenrith, the Returned King', 'from_c': '53b', 'to_c': '303'},
+        { 'from_s': 'Promo Pack: Strixhaven', 'to_s': 'Strixhaven: School of Mages Promos', 'from_n': 'Culling Ritual', 'from_c': '62', 'to_c': '172p'},
+        { 'from_s': 'Bundle Promos', 'to_s': 'Modern Horizons 2', 'from_n': "Yusri, Fortune's Flame", 'from_c': '9', 'to_c': '492'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Plains', 'from_c': '594', 'to_c': '481'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Plains', 'from_c': '595', 'to_c': '482'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Island', 'from_c': '596', 'to_c': '483'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Island', 'from_c': '597', 'to_c': '484'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Swamp', 'from_c': '598', 'to_c': '485'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Swamp', 'from_c': '599', 'to_c': '486'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Mountain', 'from_c': '600', 'to_c': '487'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Mountain', 'from_c': '601', 'to_c': '488'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Forest', 'from_c': '602', 'to_c': '489'},
+        { 'from_s': 'Modern Horizons 2', 'from_n': 'Forest', 'from_c': '603', 'to_c': '490'},
+        { 'from_s': 'Promo Pack: Forgotten Realms', 'to_s': 'Adventures in the Forgotten Realms', 'from_n': 'Prosperous Innkeeper', 'from_c': '5', 'to_c': '402'},
+        { 'from_s': 'Love Your LGS', 'to_s': 'Love Your LGS 2021', 'from_n': 'Dig Through Time', 'from_c': '4', 'to_c': '2'},
+        { 'from_s': 'Love Your LGS', 'to_s': 'Love Your LGS 2021', 'from_n': "Bolas's Citadel", 'from_c': '5', 'to_c': '3'},
+        { 'from_s': 'Store Championship Promos', 'to_s': 'Wizards Play Network 2021', 'from_n': 'Arbor Elf', 'from_c': '6', 'to_c': '1'},
+        { 'from_s': 'Bring-a-Friend Promos', 'to_s': 'Wizards Play Network 2021', 'from_n': 'Mind Stone', 'from_c': '1', 'to_c': '5'},
+        { 'from_s': 'Promo Pack: Innistrad Midnight Hunt', 'to_s': 'Innistrad: Midnight Hunt Promos', 'from_n': 'Slogurk, the Overslime', 'from_c': '63', 'to_c': '242p'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Innistrad: Crimson Vow', 'from_n': 'Voldaren Estate', 'from_c': '66', 'to_c': '403'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Kamigawa: Neon Dynasty Promos', 'from_n': 'Tatsunari, Toad Rider', 'from_c': '2284', 'to_c': '123s'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Kamigawa: Neon Dynasty Promos', 'from_n': 'Satoru Umezawa', 'from_c': '2317', 'to_c': '234s'},
+        { 'from_s': 'Promo Pack: Kamigawa', 'to_s': 'Kamigawa: Neon Dynasty Promos', 'from_n': 'Lizard Blades', 'from_c': '39', 'to_c': '153s'},
+        { 'from_s': 'Buy-a-Box Promos', 'to_s': 'Streets of New Capenna', 'from_n': 'Jaxis, the Troublemaker', 'from_c': '68', 'to_c': '461'},
+        { 'from_s': 'Prerelease Cards', 'to_s': "Battle for Baldur's Gate Promos", 'from_n': 'Astarion, the Decadent', 'from_c': '2474', 'to_c': '265s'},
+        { 'from_s': 'Bundle Promos', 'to_s': 'Dominaria United', 'from_n': 'Herd Migration', 'from_c': '70', 'to_c': '429'},
+        { 'from_s': 'Prerelease Cards', 'to_s': 'Phyrexia: All Will Be One Promos', 'from_n': 'Blackcleave Cliffs', 'from_c': '2750', 'to_c': '248s'},
+        { 'from_s': 'Bundle Promos', 'to_s': 'March of the Machine', 'from_n': 'Ghalta and Mavren', 'from_c': '23', 'to_c': '386'},
+        #To do, stamped with year
+        #{ 'from_s': 'Prerelease Cards', 'to_s': '', 'from_n': 'Blackcleave Cliffs', 'from_c': '2750', 'to_c': ''}
+    ]
+    
+    #DEBUG
+    if "Plains" in split_card['%n'] and '594' in split_card['%c']:
+        pass
+    
+    for card in mtg_cb_singles:
+        if split_card['%n'] in card['from_n'] and split_card['%c'] in card['from_c']:
+            if 'to_s' in card: split_card['%s'] = card['to_s']
+            if 'to_n' in card: split_card['%n'] = card['to_n']
+            if 'to_c' in card: split_card['%c'] = card['to_c']
     
     return split_card
 def get_unique_cards_to_import(patterned_cards: list) -> list:

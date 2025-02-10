@@ -268,7 +268,8 @@ def get_cards_ids_prices_sets_flip_list(connection: Connection, price_source: st
     currency = config.get('COLLECTION', 'price_currency')
     try: exchange_rate = currency_rates.get_rate('USD', currency.upper())
     except RatesNotAvailableError: exchange_rate = 1
-    
+    except ValueError: exchange_rate = 1
+
     query = f'''SELECT id, prices, "set", card_faces FROM {get_database_table_name()} ORDER BY '''
     for attribute in SORTING_ATTRIBUTES: query += f'sort_key_{attribute}, '
     query = query[:-2]

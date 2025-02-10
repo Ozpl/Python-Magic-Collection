@@ -218,7 +218,10 @@ def create_user_interface(db_connection, cl_connection, dk_connection):
     from modules.database.collections import get_cards_from_collection
     from modules.database.functions import get_cards_ids_prices_sets_flip_list
     from modules.logging import console_log
-    global database_connection, collections_connection, decks_connection, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards
+    from forex_python.converter import CurrencyRates, RatesNotAvailableError
+    
+    
+    global database_connection, collections_connection, decks_connection, database_cards, collection_cards, collection_filtered_cards, add_cards_found_cards, currency_rates, currency, exchange_rate
     console_log('info', 'Creating UI')
 
     database_connection = db_connection
@@ -228,6 +231,12 @@ def create_user_interface(db_connection, cl_connection, dk_connection):
     database_cards = get_cards_ids_prices_sets_flip_list(database_connection, config.get('COLLECTION', 'price_source'))
     collection_cards = get_cards_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'))
     collection_filtered_cards = []
+    
+    currency_rates = CurrencyRates()
+    currency = config.get('COLLECTION', 'price_currency')
+    try: exchange_rate = currency_rates.get_rate('USD', currency.upper())
+    except RatesNotAvailableError: exchange_rate = 1
+    except ValueError: exchange_rate = 1
 
     tab_bar.currentChanged.connect(tab_changed)
     
@@ -534,9 +543,9 @@ def create_collection_tab_grid():
                     font-size: {config.get('APP', 'font_size')}px;
                     """
                 if config.get_boolean('COLLECTION', 'show_database'):
-                    stylesheet += "background-color: LightGrey" if 'Not collected' in card_info.text() else "background-color: LightSteelBlue"
+                    stylesheet += "background-color: Grey" if 'Not collected' in card_info.text() else "background-color: LightSteelBlue"
                 else:
-                    stylesheet += "background-color: LightGrey"
+                    stylesheet += "background-color: Grey"
                 groupbox.setStyleSheet(stylesheet)
                 groupbox.setLayout(layout)
                 layout.addWidget(card_info)
@@ -597,12 +606,6 @@ def card_image_mouse_pressed(event: QMouseEvent):
 def update_preview(card: dict, object_name: str):
     from modules.database.collections import get_card_from_collection
     from modules.ui_functions import prepare_card_description
-    from forex_python.converter import CurrencyRates, RatesNotAvailableError
-    
-    currency_rates = CurrencyRates()
-    currency = config.get('COLLECTION', 'price_currency')
-    try: exchange_rate = currency_rates.get_rate('USD', currency.upper())
-    except RatesNotAvailableError: exchange_rate = 1
     
     card_in_col = get_card_from_collection(collections_connection, config.get('COLLECTION', 'current_collection'), card['id'])
     regular = card_in_col['regular']
